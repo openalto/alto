@@ -29,7 +29,7 @@ console script. To run this script uncomment the following lines in the
 ``[options.entry_points]`` section in ``setup.cfg``::
 
     console_scripts =
-         fibonacci = alto.skeleton:run
+         alto = alto.main:run
 
 Then run ``pip install .`` (or ``pip install -e .`` for editable mode)
 which will install the command ``fibonacci`` inside your current environment.
@@ -51,8 +51,8 @@ import sys
 
 from alto import __version__
 
-__author__ = "Jensen Zhang"
-__copyright__ = "Jensen Zhang"
+__author__ = "OpenALTO"
+__copyright__ = "OpenALTO"
 __license__ = "MIT"
 
 _logger = logging.getLogger(__name__)
@@ -169,6 +169,6 @@ if __name__ == "__main__":
     # After installing your project with pip, users can also run your Python
     # modules as scripts via the ``-m`` flag, as defined in PEP 338::
     #
-    #     python -m alto.skeleton 42
+    #     python -m alto.main 42
     #
     run()

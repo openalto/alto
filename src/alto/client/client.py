@@ -33,15 +33,37 @@ _logger = logging.getLogger(__name__)
 
 class Client:
     """
-    ALTO client class.
+    Base ALTO client class.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, config=True, default_ird=None, auth_type=None,
+                 username=None, password=None, **kw_args) -> None:
         """
         Constructor for the ALTO client class.
         """
-        self.config = Config()
+        _logger.debug("Creating ALTO client instance.")
+        if default_ird:
+            self.default_ird = default_ird
+        if auth_type:
+            self.auth_type = auth_type
+        if username:
+            self.username = username
+        if password:
+            self.password = password
+        if config:
+            self.config = Config()
+
+    def get_ird(self):
+        """
+        Return ALTO Information Resource Directory (IRD).
+        """
+        # TODO: query the default ird configured for this client.
+        raise NotImplementedError
 
     def get_routing_cost(self, src_ip: str, dst_ip: str, cost_map=None, cost_type=None):
+        """
+        Return ALTO cost between `src_ip` and `dst_ip`.
+        """
         # TODO: query cost map to get routing cost between source and destination.
-        raise NotImplemented
+        # Tips: query dependent network map to get PIDs.
+        raise NotImplementedError

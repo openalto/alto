@@ -24,15 +24,21 @@
 # Authors:
 # - Jensen Zhang <jingxuan.n.zhang@gmail.com>
 
-####################################################
-# Configure an ALTO client
-####################################################
-[client]
-# ALTO server
-default_ird = http://localhost:8181/alto/simpleird/default
-auth_type = userpass
-username = admin
-password = admin
+import pytest
 
-[http]
-retry = 3
+from alto.client import Client
+
+__author__ = "OpenALTO"
+__copyright__ = "OpenALTO"
+__license__ = "MIT"
+
+
+def test_client():
+    """ALTO Client Tests"""
+    ac = Client(config=False, default_ird="http://mockird", auth_type="userpass",
+                username="admin", password="admin")
+    with pytest.raises(NotImplementedError):
+        ac.get_ird()
+
+    with pytest.raises(NotImplementedError):
+        ac.get_routing_cost("192.168.0.2", "192.168.51.100")

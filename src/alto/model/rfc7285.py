@@ -71,3 +71,12 @@ class InformationResourceDirectory(object):
     @property
     def resources(self):
         return self._resources
+class NetworkMap:
+
+    def __init__(self) -> None:
+        pass
+
+class CostMap:
+
+    def __init__(self) -> None:
+        pass

@@ -24,15 +24,10 @@
 # Authors:
 # - Jensen Zhang <jingxuan.n.zhang@gmail.com>
 
-####################################################
-# Configure an ALTO client
-####################################################
-[client]
-# ALTO server
-default_ird = http://localhost:8181/alto/simpleird/default
-auth_type = userpass
-username = admin
-password = admin
+class Server:
+    """
+    Class for ALTO server OAM & Mgmt.
+    """
 
-[http]
-retry = 3
+    def __init__(self) -> None:
+        pass
