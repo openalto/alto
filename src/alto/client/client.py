@@ -27,6 +27,8 @@
 
 import logging
 
+from typing import List, Dict
+
 from alto.config import Config
 from alto.model import ALTONetworkMap, ALTOCostMap
 
@@ -102,8 +104,8 @@ class Client:
         # TODO: query the default ird configured for this client.
         raise NotImplementedError
 
-    def get_routing_costs(self, src_ips: list[str], dst_ips: list[str],
-                         cost_map=None, cost_type=None) -> dict[str, dict[str, int or float]]:
+    def get_routing_costs(self, src_ips: List[str], dst_ips: List[str],
+                          cost_map=None, cost_type=None) -> Dict[str, Dict[str, int or float]]:
         """
         Return ALTO routing costs between `src_ips` and `dst_ips`.
 

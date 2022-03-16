@@ -27,6 +27,7 @@
 
 
 from dataclasses import dataclass
+from typing import List, Dict
 import requests
 import pytricia
 
@@ -61,13 +62,13 @@ class CostType:
 
 class Meta(object):
 
-    def __init__(self, data: dict) -> None:
+    def __init__(self, data: Dict) -> None:
         self.data = data
 
 
 class IRDMeta(Meta):
 
-    def __init__(self, data: dict) -> None:
+    def __init__(self, data: Dict) -> None:
         super().__init__(data)
         self._cost_types = data['cost-types']
         self._default_alto_network_map = data['default-alto-network-map']
@@ -83,7 +84,7 @@ class IRDMeta(Meta):
 
 class IRDResourceEntry(object):
 
-    def __init__(self, data: dict) -> None:
+    def __init__(self, data: Dict) -> None:
         self.data = data
         self._uri = data['uri']
 
@@ -94,7 +95,7 @@ class IRDResourceEntry(object):
 
 class InformationResourceDirectory(object):
 
-    def __init__(self, data: dict) -> None:
+    def __init__(self, data: Dict) -> None:
         self._meta = Meta(data['meta'])
         self._resources = {rid: IRDResourceEntry(res) for rid, res in data['resources'].items()}
 
@@ -163,14 +164,14 @@ class ALTONetworkMap(ALTOBaseResource):
             for ipv6 in self.nmap_[pid].get('ipv6', []):
                 self.plt_[ipv6] = pid
 
-    def get_pid(self, ipaddr: str or list[str]) -> list[str]:
+    def get_pid(self, ipaddr: str or List[str]) -> List[str]:
         if isinstance(ipaddr, str):
             ipaddr = [ipaddr]
         return list(map(lambda a: self.plt_[str(a)], ipaddr))
 
 
 class ALTOCostMap(ALTOBaseResource):
-    dependent_vtags = list[Vtag]
+    dependent_vtags = List[Vtag]
 
     def __init__(self, url, **kwargs):
         ALTOBaseResource.__init__(self, ALTO_CTYPE_CM, url, **kwargs)
@@ -191,12 +192,12 @@ class ALTOCostMap(ALTOBaseResource):
 
         self.cmap_ = data['cost-map']
 
-    def get_costs(self, spid: list[str],
-                  dpid: list[str]) -> dict[str, dict[str, int or float]]:
+    def get_costs(self, spid: List[str],
+                  dpid: List[str]) -> Dict[str, Dict[str, int or float]]:
         result = {}
         for s in set(spid):
             if s not in self.cmap_:
                 continue
-            result |= {s: {d: self.cmap_[s][d] for d in set(dpid) if d in self.cmap_[s]}}
+            result.update({s: {d: self.cmap_[s][d] for d in set(dpid) if d in self.cmap_[s]}})
         return result
 

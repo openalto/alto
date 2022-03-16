@@ -128,7 +128,7 @@ def mocked_requests_get(uri, *args, **kwars):
 
 @mock.patch('requests.get', side_effect=mocked_requests_get)
 def test_client_config(*args):
-    os.environ['ALTO_CONFIG'] = os.path.join(os.path.dirname(__file__), '../etc/alto.conf')
+    os.environ['ALTO_CONFIG'] = os.path.join(os.path.dirname(__file__), '../etc/alto.conf.template')
     ac = Client()
 
     nm = ac.get_network_map()
