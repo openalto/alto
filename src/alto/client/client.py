@@ -23,10 +23,12 @@
 #
 # Authors:
 # - Jensen Zhang <jingxuan.n.zhang@gmail.com>
+# - Kai Gao <emiapwil@gmail.com>
 
 import logging
 
 from alto.config import Config
+from alto.model import ALTONetworkMap, ALTOCostMap
 
 _logger = logging.getLogger(__name__)
 
@@ -36,34 +38,113 @@ class Client:
     Base ALTO client class.
     """
 
-    def __init__(self, config=True, default_ird=None, auth_type=None,
-                 username=None, password=None, **kw_args) -> None:
+    def __init__(self, config=True, default_ird=None, auth=None, **kwargs) -> None:
         """
         Constructor for the ALTO client class.
         """
         _logger.debug("Creating ALTO client instance.")
-        if default_ird:
-            self.default_ird = default_ird
-        if auth_type:
-            self.auth_type = auth_type
-        if username:
-            self.username = username
-        if password:
-            self.password = password
+        self.default_ird = default_ird if default_ird else None
+        self.auth = auth if auth else None
         if config:
             self.config = Config()
+
+    def get_network_map(self, url=None, **kwargs):
+        """
+        Low-level API: get raw network map object.
+
+        Parameters
+        ----------
+        url : (optional) str
+            URI to access the network map
+
+        Returns
+        -------
+        ALTONetworkMap
+            ALTO Network Map object.
+        """
+        if url is None:
+            url = self.config.get_default_networkmap_uri()
+        auth = self.config.get_server_auth()
+        if self.auth:
+            auth = self.auth
+        return ALTONetworkMap(url, auth=auth, **kwargs)
+
+    def get_cost_map(self, url=None, **kwargs):
+        """
+        Low-level API: get raw cost map object.
+
+        Parameters
+        ----------
+        url : (optional) str
+            URI to access the cost map
+
+        Returns
+        -------
+        ALTOCostMap
+            ALTO Cost Map object.
+        """
+        if url is None:
+            url = self.config.get_default_costmap_uri()
+        auth = self.config.get_server_auth()
+        if self.auth:
+            auth = self.auth
+        return ALTOCostMap(url, auth=auth, **kwargs)
 
     def get_ird(self):
         """
         Return ALTO Information Resource Directory (IRD).
+
+        Returns
+        -------
+        InformationResourceDirectory
+            ALTO Information Resource Directory (IRD) object.
         """
         # TODO: query the default ird configured for this client.
         raise NotImplementedError
 
-    def get_routing_cost(self, src_ip: str, dst_ip: str, cost_map=None, cost_type=None):
+    def get_routing_costs(self, src_ips: list[str], dst_ips: list[str],
+                         cost_map=None, cost_type=None) -> dict[str, dict[str, int or float]]:
         """
-        Return ALTO cost between `src_ip` and `dst_ip`.
+        Return ALTO routing costs between `src_ips` and `dst_ips`.
+
+        This method will query cost map and network map to get coarse-grained costs.
+
+        Parameters
+        ----------
+        src_ips : list[str]
+            List of source IP addresses
+        dst_ips : list[str]
+            List of destination IP addresses
+        cost_map : (optional) str
+            Resource id of the requested cost map
+        cost_type : (optional) str
+            Requested cost type
+
+        Returns
+        -------
+        dict[str, dict[str, int or float]]
+            Mapping of routing costs
         """
-        # TODO: query cost map to get routing cost between source and destination.
-        # Tips: query dependent network map to get PIDs.
-        raise NotImplementedError
+        if cost_map is not None:
+            # TODO: read IRD to get cost map object using the resource id.
+            raise NotImplementedError
+
+        if cost_type is not None:
+            # TODO: user-specified cost type for filtered cost map
+            raise NotImplementedError
+
+        _nm = self.get_network_map()
+        spids = _nm.get_pid(src_ips)
+        spidmap = dict(zip(src_ips, spids))
+        dpids = _nm.get_pid(dst_ips)
+        dpidmap = dict(zip(dst_ips, dpids))
+
+        _cm = self.get_cost_map()
+        costs = _cm.get_costs(spids, dpids)
+        return {
+            sip: {
+                dip: costs[spidmap[sip]][dpidmap[dip]]
+                for dip in dst_ips
+            } for sip in src_ips
+        }
+

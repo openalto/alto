@@ -63,26 +63,42 @@ class Config:
     """
     def __init__(self) -> None:
         if sys.version_info < (3, 2):
-            self.parser = ConfigParser.SafeConfigParser
+            self.parser = ConfigParser.SafeConfigParser()
         else:
-            self.parser = ConfigParser.ConfigParser
+            self.parser = ConfigParser.ConfigParser()
         if 'ALTO_CONFIG' in os.environ:
             self.location = os.environ['ALTO_CONFIG']
         else:
             config_paths = [os.path.join(d, CONFIG_FILE) for d in get_ordered_config_dirs()]
             self.location = next(iter(filter(os.path.exists, config_paths)), None)
+
+
+    def get_server_auth(self):
         self.parser.read(self.location)
-
-
-    def get_server_info(self):
-        base_uri = self.parser.get('client', 'default_alto_server')
         auth_type = self.parser.get('client', 'auth_type')
+        auth = None
         if auth_type == 'userpass':
             auth = (
                 self.parser.get('client', 'username'),
                 self.parser.get('client', 'password')
                 )
-        options = {
-            'auth': auth
-        }
-        return base_uri, options
+        return auth
+
+
+    def get_default_ird_uri(self):
+        self.parser.read(self.location)
+        uri = self.parser.get('client', 'default_ird')
+        return uri
+
+
+    def get_default_networkmap_uri(self):
+        self.parser.read(self.location)
+        uri = self.parser.get('client', 'default_networkmap')
+        return uri
+
+
+    def get_default_costmap_uri(self):
+        self.parser.read(self.location)
+        uri = self.parser.get('client', 'default_costmap')
+        return uri
+
