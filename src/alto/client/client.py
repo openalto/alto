@@ -129,7 +129,8 @@ class Client:
         """
         if cost_map is not None:
             # TODO: read IRD to get cost map object using the resource id.
-            raise NotImplementedError
+            # read static IRD to get cost map uri.
+            cost_map = self.config.get_static_resource_uri(cost_map)
 
         if cost_type is not None:
             # TODO: user-specified cost type for filtered cost map
@@ -141,7 +142,7 @@ class Client:
         dpids = _nm.get_pid(dst_ips)
         dpidmap = dict(zip(dst_ips, dpids))
 
-        _cm = self.get_cost_map()
+        _cm = self.get_cost_map(cost_map)
         costs = _cm.get_costs(spids, dpids)
         return {
             sip: {

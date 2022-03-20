@@ -26,6 +26,7 @@
 
 import os
 import sys
+import json
 
 try:
     # Compatible with Python 2
@@ -101,4 +102,9 @@ class Config:
         self.parser.read(self.location)
         uri = self.parser.get('client', 'default_costmap')
         return uri
+
+    def get_static_resource_uri(self, resource_id):
+        self.parser.read(self.location)
+        static_ird = json.loads(self.parser.get('client', 'static_ird').strip())
+        return static_ird.get(resource_id)
 

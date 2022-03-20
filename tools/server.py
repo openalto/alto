@@ -10,4 +10,12 @@ def get_networkmap():
 def get_costmap():
     return send_file('cm.json', mimetype='application/alto-costmap+json')
 
-app.run(port=8181)
+@app.route('/costmap/bw-available')
+def get_costmap_bw_avail():
+    return send_file('cm-bw.json', mimetype='application/alto-costmap+json')
+
+@app.route('/costmap/delay-ow')
+def get_costmap_delay_ow():
+    return send_file('cm-delay.json', mimetype='application/alto-costmap+json')
+
+app.run(host='0.0.0.0', port=8181)

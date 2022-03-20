@@ -32,6 +32,9 @@
 default_ird = http://localhost:8181/alto/simpleird/default
 default_networkmap = http://localhost:8181/alto/networkmap/default-networkmap
 default_costmap = http://localhost:8181/alto/costmap/default-costmap
+static_ird = {
+  "costmap-bw-available": "http://localhost:8181/costmap/bw-available",
+  "costmap-delay-ow": "http://localhost:8181/costmap/delay-ow" }
 auth_type = userpass
 username = admin
 password = admin
