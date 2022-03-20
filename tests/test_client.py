@@ -29,7 +29,8 @@ import pytest
 from unittest import mock
 
 from alto.client import Client
-from alto.model.rfc7285 import ALTO_CTYPE_NM, ALTO_CTYPE_CM
+from alto.model.rfc7285 import ALTO_CTYPE_NM, ALTO_CTYPE_CM, CostType, ALTOEndpointCostParam
+import json
 
 __author__ = "OpenALTO"
 __copyright__ = "OpenALTO"
@@ -105,6 +106,25 @@ def test_client_noimpl():
     with pytest.raises(NotImplementedError):
         ac.get_ird()
 
+def test_model():
+    cost_type = CostType('routingcost', 'numerical')
+    assert cost_type.cost_metric == 'routingcost'
+    assert cost_type.cost_mode == 'numerical'
+
+    cost_type = CostType.from_json(cost_type.to_json())
+    print(cost_type.to_json())
+    assert cost_type.cost_metric == 'routingcost'
+    assert cost_type.cost_mode == 'numerical'
+
+    ecs_params = ALTOEndpointCostParam(CostType('routingcost', 'numerical'), [], None)
+    d = json.loads(ecs_params.to_json())
+    d['endpoint-flows'] = [ {'srcs': ['ipv4:192.168.1.1'], 'dsts': ['ipv4:192.168.1.2']}]
+    ecs_params = ALTOEndpointCostParam.from_json(json.dumps(d))
+    assert len(ecs_params.endpoint_flows) == 1
+    assert len(ecs_params.endpoint_flows[0].srcs) == 1
+    assert len(ecs_params.endpoint_flows[0].dsts) == 1
+
+    print(ecs_params.to_json())
 
 def mocked_requests_get(uri, *args, **kwars):
     class MockResponse:
@@ -155,3 +175,5 @@ def test_client_config(*args):
     assert '198.51.100.2' in dst_costs2 and '198.51.100.254' in dst_costs2
     assert dst_costs2['198.51.100.2'] == 1 and dst_costs2['198.51.100.254'] == 5
 
+if __name__ == '__main__':
+    test_model()

@@ -26,39 +26,36 @@
 # - Kai Gao <emiapwil@gmail.com>
 
 
-from dataclasses import dataclass
-from typing import List, Dict
+from dataclasses import dataclass, field
+from typing import List, Dict, Optional
 import requests
 import pytricia
+from dataclasses_json import dataclass_json, LetterCase, config
 
 ALTO_CTYPE_NM = 'application/alto-networkmap+json'
 ALTO_CTYPE_CM = 'application/alto-costmap+json'
+ALTO_CTYPE_ECS = 'application/alto-endpointcost+json'
+ALTO_CTYPE_ECS_PARAM = 'application/alto-endpointcostparams+json'
 ALTO_CTYPE_ERROR = 'application/alto-error+json'
 
 
+@dataclass_json(letter_case=LetterCase.KEBAB)
 @dataclass
 class Vtag:
     resource_id: str
     tag: str
 
-    @staticmethod
-    def from_json(data):
-        rid = data['resource-id']
-        tag = data['tag']
-        return Vtag(resource_id = rid, tag = tag)
-
-
+@dataclass_json(letter_case=LetterCase.KEBAB)
 @dataclass
 class CostType:
-    metric: str
-    mode: str
+    cost_metric: str
+    cost_mode: str
 
-    @staticmethod
-    def from_json(data):
-        metric = data['cost-metric']
-        mode = data['cost-mode']
-        return CostType(metric=metric, mode=mode)
-
+@dataclass_json(letter_case=LetterCase.KEBAB)
+@dataclass
+class EndpointFilter:
+    srcs: List[str]
+    dsts: List[str]
 
 class Meta(object):
 
@@ -128,10 +125,26 @@ class ALTOBaseResource:
 
         return r
 
+    def post(self, ptype, params):
+        self.check_params(params)
+
+        headers = {
+            'accepts': self.ctype + ',' + ALTO_CTYPE_ERROR,
+            'Content-type': ptype
+        }
+        r = requests.get(self.url, auth=self.auth, headers=headers)
+        r.raise_for_status()
+
+        self.check_headers(r)
+        self.check_contents(r)
+
     def check_headers(self, r):
         raise NotImplementedError
 
     def check_contents(self, r):
+        raise NotImplementedError
+
+    def check_params(self, params):
         raise NotImplementedError
 
 
@@ -149,6 +162,9 @@ class ALTONetworkMap(ALTOBaseResource):
         assert r.headers['content-type'] == ALTO_CTYPE_NM
 
     def check_contents(self, r):
+        pass
+
+    def check_params(self, params):
         pass
 
     def __build_networkmap(self, data):
@@ -185,6 +201,9 @@ class ALTOCostMap(ALTOBaseResource):
     def check_contents(self, r):
         pass
 
+    def check_params(self, params):
+        pass
+
     def __build_costmap(self, data):
         self.dependent_vtags = [Vtag.from_json(dv)
                                 for dv in data['meta'].get('dependent_vtags', [])]
@@ -201,3 +220,16 @@ class ALTOCostMap(ALTOBaseResource):
             result.update({s: {d: self.cmap_[s][d] for d in set(dpid) if d in self.cmap_[s]}})
         return result
 
+@dataclass_json(letter_case=LetterCase.KEBAB)
+@dataclass
+class ALTOEndpointCostParam:
+    cost_type: CostType
+    endpoint_flows: Optional[list[EndpointFilter]] = field(default=None, metadata=config(exclude=lambda x: x is None))
+    endpoints: Optional[EndpointFilter] = field(default=None, metadata=config(exclude=lambda x: x is None))
+
+class ALTOEndpointCostService(ALTOBaseResource):
+
+    def __init__(self, param, url, **kwargs):
+        ALTOBaseResource.__init__(self, ALTO_CTYPE_ECS, url, **kwargs)
+
+        r = self.post(ALTO_CTYPE_ECS_PARAM, param)
