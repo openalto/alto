@@ -16,14 +16,36 @@ IMPORTANT NOTES:
 
 import json
 import numpy as np
+import pytricia
 
-def parse_line(line):
+def parse_line(line, sep=';'):
     line_split = line.split(":")
     # line_split[0] is the field name, e.g. "links"
     line_val = line_split[1].strip()
-    lines = list(map(lambda s: s.strip(), line_val.split(';')))
+    lines = list(map(lambda s: s.strip(), line_val.split(sep)))
     lines = list(filter(lambda a: len(a) > 0, lines))
     return lines
+
+def get_host_by_ip(ip, ip_table):
+    return ip_table[ip]
+
+def get_host_for_flows(ip_table, flows):
+    flows_by_host = []
+    for (src, dst) in flows:
+        sip, dip = src.split(':')[1], dst.split(':')[1]
+        src = get_host_by_ip(sip, ip_table)
+        dst = get_host_by_ip(dip, ip_table)
+        flows_by_host += [(src, dst)]
+    return flows_by_host
+
+
+def build_ip_table(ip_info_str):
+    table = pytricia.PyTricia(32)
+    lines = parse_line(ip_info_str)
+    for l in lines:
+        host, ip = l[1:-1].split(',')
+        table[ip] = host
+    return table
 
 def make_link_to_id(links_str):
     tuple_strs = parse_line(links_str)
@@ -121,7 +143,7 @@ def construct_delay_dict(link_info_str=None, default_link_info_str=None):
 def get_path_delay(delay_dict, path):
     c = 0
     for i in range(len(path)-1):
-        c += delay_dict[(path[i], path[i+1])]
+        c += delay_dict.get((path[i], path[i+1]), 0)
     return c
 
 def get_flows_delay(delay_dict, path_json, flows):
@@ -143,6 +165,7 @@ def construct_from_strings_and_flows(g2conf_str, input_str, flows):
     link_info_str = None
     default_link_info_str = None
     links_str = None
+    ip_info_str = None
 
     for line in g2conf_lines:
         if line.startswith("link_info:"):
@@ -151,14 +174,21 @@ def construct_from_strings_and_flows(g2conf_str, input_str, flows):
             default_link_info_str = line
         elif line.startswith("links:"):
             links_str = line
+        elif line.startswith("ip_info:"):
+            ip_info_str = line
 
         if link_info_str is not None\
             and default_link_info_str is not None\
-            and links_str is not None:
+            and links_str is not None \
+            and ip_info_str is not None:
             break
 
     link_to_id = make_link_to_id(links_str)
     delay_dict = construct_delay_dict(link_info_str, default_link_info_str)
+
+    ip_table = build_ip_table(ip_info_str)
+
+    flows = get_host_for_flows(ip_table, flows)
 
     cap_vector = construct_cap_vector(link_to_id,
         link_info_str,
