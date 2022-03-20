@@ -2,7 +2,7 @@
   "meta" : {
     "dependent-vtags" : [
       {"resource-id": "my-default-network-map",
-       "tag": "3ee2cb7e8d63d9fab71b9b34cbf764436315542e"
+       "tag": "da65eca2eb7a10ce8b059740b0b2e3f8eb1d4785"
       }
     ],
     "cost-type" : {"cost-mode"  : "numerical",
@@ -15,6 +15,6 @@
     "XRD2": { "RUCIO": 1, "XRD1": 1,  "XRD2": 0,  "XRD3": 1, "XRD4": 1, "PID0": 1 },
     "XRD3": { "RUCIO": 0.2, "XRD1": 1,  "XRD2": 1,  "XRD3": 0, "XRD4": 0.2, "PID0": 0.2 },
     "XRD4": { "RUCIO": 0.5, "XRD1": 1,  "XRD2": 1,  "XRD3": 0.2, "XRD4": 0, "PID0": 0.5 },
-    "PID0": { "RUCIO": 5, "XRD1": 5,  "XRD2": 5,  "XRD3": 5, "XRD4": 5, "PID0": 5 }
+    "PID0": { "RUCIO": 0, "XRD1": 1,  "XRD2": 1,  "XRD3": 0.2, "XRD4": 0.5, "PID0": 0 }
   }
 }

@@ -1,0 +1,20 @@
+{
+  "meta" : {
+    "dependent-vtags" : [
+      {"resource-id": "my-default-network-map",
+       "tag": "da65eca2eb7a10ce8b059740b0b2e3f8eb1d4785"
+      }
+    ],
+    "cost-type" : {"cost-mode"  : "numerical",
+                   "cost-metric": "bw-residual"
+                  }
+  },
+  "cost-map" : {
+    "RUCIO": { "RUCIO": 1000000, "XRD1": 1000,  "XRD2": 1000,  "XRD3": 5000, "XRD4": 2000, "PID0": 1000000 },
+    "XRD1": { "RUCIO": 1000, "XRD1": 1000000,  "XRD2": 1000,  "XRD3": 1000, "XRD4": 1000, "PID0": 1000000 },
+    "XRD2": { "RUCIO": 1000, "XRD1": 1000,  "XRD2": 1000000,  "XRD3": 1000, "XRD4": 1000, "PID0": 1000 },
+    "XRD3": { "RUCIO": 5000, "XRD1": 1000,  "XRD2": 1000,  "XRD3": 1000000, "XRD4": 5000, "PID0": 5000 },
+    "XRD4": { "RUCIO": 2000, "XRD1": 1000,  "XRD2": 1000,  "XRD3": 5000, "XRD4": 1000000, "PID0": 2000 },
+    "PID0": { "RUCIO": 1000000, "XRD1": 1000,  "XRD2": 1000,  "XRD3": 5000, "XRD4": 2000, "PID0": 1000000 }
+  }
+}
