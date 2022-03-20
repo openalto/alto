@@ -53,7 +53,7 @@ def do_request(input_dict, alto_server):
     )
 
     alto_json_resp = alto_r.json()
-    return alto_json_resp
+    return json.dumps(alto_json_resp)
 
 def do_request_from_str(input_str, alto_server):
     return do_request(input_to_json(input_str), alto_server)

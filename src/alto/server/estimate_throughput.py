@@ -293,11 +293,16 @@ if __name__ == "__main__":
             tput_dict[src][dst] = cur_tput
 
         retval = {
+            "meta": {
+                "cost-type": {"cost-mode" : "numerical",
+                              "cost-metric" : "tput"}
+            },
             "endpoint-cost-map": tput_dict
         }
 
         response = make_response(json.dumps(retval))
         response.headers['Content-Type'] = 'application/alto-endpointcost+json'
+        print(json.dumps(retval))
         return response
 
     app.run()
