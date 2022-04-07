@@ -59,7 +59,7 @@ if __name__ == "__main__":
 		input_str = infp.read()
 		infp.close()
         
-        from g2parser import G2Parser
+        	from g2parser import G2Parser
 		parser = G2Parser(g2conf_str, input_str)
 
 	alto_endpoint = "/endpoint/cost/"
