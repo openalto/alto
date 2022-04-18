@@ -58,10 +58,24 @@ def solve_num(A, c, alpha, rho, niter=100, debug=False):
     x, u = ret['x'], ret['zl']
     return np.array(x).flatten(), np.array(u).flatten()
 
-def solve(A, c, alpha, rho, niter=100, debug=False):
+def get_num_param(n, RTT, ccalg='cubic'):
+    alpha, rho = None, None
+    if ccalg == 'vegas':
+        alpha = np.ones(n)
+        rho = np.ones(n)
+    elif ccalg == 'reno':
+        alpha = [2] * n
+        rho = [rtt**(-2) for rtt in RTT]
+    elif ccalg == 'cubic':
+        alpha = [4/3] * n
+        rho = [rtt**(-1/3) for rtt in RTT]
+    return alpha, rho
+
+def solve(A, c, RTT, niter=100, debug=False):
     """
     For backward compatibility
     """
+	alpha, rho = get_num_param(len(RTT), RTT)
     return solve_num(A, c, alpha, rho, niter, debug)
 
 def train(samples, A, c, alpha):
