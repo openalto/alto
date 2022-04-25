@@ -14,17 +14,52 @@ Can be used in two ways:
         SRC1 -> DST1 DST2 DST3 ...
         SRC2 -> DST4 DST5 DST6 ...
         ...
-
-Note that, due to time constraints, this script does not make use of the
-input compression made possible by Request Design 2.
 """
 
 import json
 import requests
 
 def input_to_json(input_str):
+	"""Converts a string, representing a list of flows,
+	into a dict that can be converted to JSON and sent to an ALTO server.
+
+	Args:
+		input_str (str): A string representing a list of flows.
+			The list of flows should be of the form:
+				SRC1 -> DST1 DST2 DST3 ...
+				SRC2 -> DST4 DST5 DST6 ...
+				...
+	
+	Returns:
+		A list of flows.
+	"""
     input_lines = input_str.splitlines()
-    # no compression; TODO: compress
+	"""
+	TODO: add compression. https://github.com/openalto/alto/issues/7
+	What does "compression" mean in this context? As was decided during a
+		meeting before the hackathon (although I can't find the Google Doc
+		in which this decision was made), the format of requests should
+		allow flows to be specified by specifying a many-to-many relationship
+		between sources and destinations. An example is as follows:
+
+		{"srcs": ["src1", "src2", "src3"], "dsts": ["dst1", "dst2"]}
+
+		The above dict defines six flows: one flow from each source to each
+		destination.
+	
+	Now, this format was chosen to allow for the compression of requests.
+		However, the input format groups flows by source. Thus, an input like
+
+		SRC1 -> DST1 DST2
+		SRC2 -> DST1 DST2
+		SRC3 -> DST1 DST2
+
+		can be compressed to the dictionary given above. But this code doesn't
+		currently do that. The problem of finding an optimal compression
+		strikes me as NP-hard (although I haven't actually thought it through).
+		Thus, the current code simply naively translates the input string into
+		a dict.
+	"""
     ef_arr = []
     for line in input_lines:
         line_split = line.split("->")
@@ -36,6 +71,22 @@ def input_to_json(input_str):
     return ef_arr
 
 def do_request(input_dict, alto_server):
+	"""Obtains ALTO throughput data for an input list representing flows
+		of interest.
+
+	Args:
+		input_dict (list): A list of dicts, representing a list of flows.
+			The list should be of the form
+			[{"srcs": [src1, src2, src3, ...], "dsts": [dst1, dst2, dst3, ...]},
+			{"srcs": [src4, src5, src6, ...], "dsts": [dst4, dst5, dst6, ...]},
+			...]
+
+		alto_server (str): The base URL for the ALTO server. This URL cannot
+			end in a "/".
+	Returns:
+		A JSON string representing the throughput for each flow
+	"""
+
     alto_endpoint = "/endpoint/cost"
     query_json = {
         "cost-type": {"cost-mode" : "numerical",
@@ -56,9 +107,41 @@ def do_request(input_dict, alto_server):
     return json.dumps(alto_json_resp)
 
 def do_request_from_str(input_str, alto_server):
+	"""Obtains ALTO throughput data for an input string representing flows
+		of interest.
+
+	Args:
+		input_str (str): A string representing a list of flows.
+			The list of flows should be of the form:
+				SRC1 -> DST1 DST2 DST3 ...
+				SRC2 -> DST4 DST5 DST6 ...
+				...
+
+		alto_server (str): The base URL for the ALTO server. This URL cannot
+			end in a "/".
+
+	Returns:
+		A JSON string representing the throughput for each flow
+	"""
     return do_request(input_to_json(input_str), alto_server)
 
 if __name__ == "__main__":
+	"""Obtains ALTO throughput data for an input file representing flows
+		of interest.
+
+	Args:
+		--flows (str): A path to a list of flows.
+			The list of flows should be of the form:
+				SRC1 -> DST1 DST2 DST3 ...
+				SRC2 -> DST4 DST5 DST6 ...
+				...
+
+		--alto-server (str): The base URL for the ALTO server. This URL cannot
+			end in a "/".
+
+	Returns:
+		A JSON string representing the throughput for each flow
+	"""
     import argparse
     import sys
 
