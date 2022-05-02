@@ -24,10 +24,13 @@
 # Authors:
 # - Jensen Zhang <jingxuan.n.zhang@gmail.com>
 # - Kai Gao <emiapwil@gmail.com>
+# - Jacob Dunefsky <jacob.dunefsky@yale.edu>
 
 import logging
 
 from typing import List, Dict
+
+import requests
 
 from alto.config import Config
 from alto.model import ALTONetworkMap, ALTOCostMap
@@ -149,4 +152,40 @@ class Client:
                 for dip in dst_ips
             } for sip in src_ips
         }
+    
+    def get_throughput(self, input_dict: str, url=None) -> str:
+        """Obtains ALTO throughput data for an input list representing flows
+            of interest.
 
+        Args:
+            input_dict (list): A list of dicts, representing a list of flows.
+                The list should be of the form
+                [{"srcs": [src1, src2, src3, ...], "dsts": [dst1, dst2, dst3, ...]},
+                {"srcs": [src4, src5, src6, ...], "dsts": [dst4, dst5, dst6, ...]},
+                ...]
+            
+            url : (optional) str
+                URI to access the cost map
+            
+        Returns:
+            A JSON string representing the throughput for each flow
+        """
+
+        query_json = {
+            "cost-type": {"cost-mode" : "numerical",
+                          "cost-metric" : "tput"},
+            "endpoint-flows" : input_dict
+        }
+        query_str = json.dumps(query_json)
+        query_headers = {
+            "Content-Type": "application/alto-endpointcostparams+json",
+            "Accept": "application/alto-endpointcost+json,application/alto-error+json"
+        }
+        if url=None: url = self.config.get_costmap_uri()
+        alto_r = requests.post(url,
+            headers=query_headers,
+            data=query_str
+        )
+
+        alto_json_resp = alto_r.json()
+        return json.dumps(alto_json_resp)
