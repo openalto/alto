@@ -7,9 +7,13 @@ from rest_framework.exceptions import ParseError
 from rest_framework.parsers import BaseParser
 from rest_framework.renderers import MultiPartRenderer
 
-# from  rest_framework.parsers import MultiPartParser
-# ALTO_MEDIA_TYPE = 'application/alto-endpointcost+json'
-ALTO_MEDIA_TYPE = 'application/alto-endpointcostparams+json'
+from rest_framework.parsers import JSONParser
+
+HEADER_CTYPE = 'Content-Type'
+HEADER_ID = 'Content-ID'
+ALTO_CONTENT_TYPE_ECS = 'application/alto-endpointcost+json'
+ALTO_CONTENT_TYPE_PROPMAP = 'application/alto-propmap+json'
+ALTO_PARAMETER_TYPE = 'application/alto-endpointcostparams+json'
 
 
 class MultiPartRelatedRender(MultiPartRenderer):
@@ -17,7 +21,7 @@ class MultiPartRelatedRender(MultiPartRenderer):
     media_type = 'multipart/related'
     # multipart_related = 'multipart/related'
     # content-type
-    type = ALTO_MEDIA_TYPE
+    type = ALTO_CONTENT_TYPE_ECS
     format = 'multipart'
     charset = 'utf-8'
     BOUNDARY = 'Alto'
@@ -42,8 +46,8 @@ class MultiPartRelatedRender(MultiPartRenderer):
                     to_bytes(val)
                     for val in [
                         "--%s" % self.BOUNDARY,
-                        'content-type: {}'.format(item.get('content-type')),
-                        "content-id: {}".format(item.get('content-id')),
+                        '{}: {}'.format(HEADER_CTYPE, item.get(HEADER_CTYPE)),
+                        "{}: {}".format(HEADER_ID, item.get(HEADER_ID)),
                         "",
                         json.dumps(item.get('data')),
                     ]
@@ -68,20 +72,5 @@ class MultiPartRelatedRender(MultiPartRenderer):
         )
 
 
-class AltoParser(BaseParser):
-    media_type = ALTO_MEDIA_TYPE
-    renderer_class = MultiPartRelatedRender
-
-    def parse(self, stream, media_type=None, parser_context=None):
-        """
-                Parses the incoming bytestream as JSON and returns the resulting data.
-        """
-        parser_context = parser_context or {}
-        encoding = parser_context.get('encoding', settings.DEFAULT_CHARSET)
-
-        try:
-            decoded_stream = codecs.getreader(encoding)(stream)
-            parse_constant = json.strict_constant if self.strict else None
-            return json.load(decoded_stream, parse_constant=parse_constant)
-        except ValueError as exc:
-            raise ParseError('JSON parse error - %s' % str(exc))
+class AltoParser(JSONParser):
+    media_type = ALTO_PARAMETER_TYPE
