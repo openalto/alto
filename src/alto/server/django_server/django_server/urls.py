@@ -18,5 +18,5 @@ from django.urls import path,include
 
 
 urlpatterns = [
-    path('', include('alto.urls'))
+    path('', include('alto.server.django_server.alto.urls'))
 ]

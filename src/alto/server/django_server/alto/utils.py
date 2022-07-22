@@ -3,7 +3,7 @@ import uuid
 
 import requests
 from requests.exceptions import Timeout, ConnectionError
-from . import adapter
+from alto.server.path_vector import adapter
 
 IP_URLS = ["http://whatismyip.akamai.com/", "http://wgetip.com/"]
 
