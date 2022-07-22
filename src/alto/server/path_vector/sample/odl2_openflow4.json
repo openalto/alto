@@ -1,0 +1,92 @@
+{
+    "flow-node-inventory:table": [
+        {
+            "id": 0,
+            "opendaylight-flow-table-statistics:flow-table-statistics": {
+                "active-flows": 2,
+                "packets-looked-up": 84,
+                "packets-matched": 79
+            },
+            "flow": [
+                {
+                    "id": "ingress-port-2",
+                    "priority": 100,
+                    "opendaylight-flow-statistics:flow-statistics": {
+                        "packet-count": 18,
+                        "byte-count": 1428,
+                        "duration": {
+                            "nanosecond": 824000000,
+                            "second": 19
+                        }
+                    },
+                    "table_id": 0,
+                    "cookie_mask": 0,
+                    "hard-timeout": 0,
+                    "match": {
+                        "in-port": "2"
+                    },
+                    "cookie": 0,
+                    "flags": "",
+                    "instructions": {
+                        "instruction": [
+                            {
+                                "order": 0,
+                                "apply-actions": {
+                                    "action": [
+                                        {
+                                            "order": 0,
+                                            "output-action": {
+                                                "max-length": 65535,
+                                                "output-node-connector": "1"
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    },
+                    "idle-timeout": 0
+                },
+                {
+                    "id": "ingress-port-1",
+                    "priority": 100,
+                    "opendaylight-flow-statistics:flow-statistics": {
+                        "packet-count": 65,
+                        "byte-count": 5206,
+                        "duration": {
+                            "nanosecond": 824000000,
+                            "second": 19
+                        }
+                    },
+                    "table_id": 0,
+                    "cookie_mask": 0,
+                    "hard-timeout": 0,
+                    "match": {
+                        "in-port": "1"
+                    },
+                    "cookie": 0,
+                    "flags": "",
+                    "instructions": {
+                        "instruction": [
+                            {
+                                "order": 0,
+                                "apply-actions": {
+                                    "action": [
+                                        {
+                                            "order": 0,
+                                            "output-action": {
+                                                "max-length": 65535,
+                                                "output-node-connector": "2"
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    },
+                    "idle-timeout": 0
+                }
+            ]
+        }
+    ]
+}

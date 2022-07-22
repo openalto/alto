@@ -1,0 +1,216 @@
+{
+    "host": [
+        {
+            "ip": "10.0.0.250",
+            "mac": "2e:b3:c6:e7:22:54",
+            "name": "rucio",
+            "ports": [
+                {
+                    "bw": 10,
+                    "delay": 5,
+                    "name": "rucio-eth0",
+                    "network": "net1"
+                }
+            ],
+            "type": "rucio"
+        },
+        {
+            "ip": "10.0.0.251",
+            "mac": "ae:15:5d:83:0b:c8",
+            "name": "xrd1",
+            "ports": [
+                {
+                    "bw": 10,
+                    "delay": 5,
+                    "name": "xrd1-eth0",
+                    "network": "net1"
+                }
+            ],
+            "type": "xrd"
+        },
+        {
+            "ip": "10.0.0.252",
+            "mac": "2e:a9:95:b7:17:3b",
+            "name": "xrd2",
+            "ports": [
+                {
+                    "bw": 10,
+                    "delay": 5,
+                    "name": "xrd2-eth0",
+                    "network": "net2"
+                }
+            ],
+            "type": "xrd"
+        },
+        {
+            "ip": "10.0.0.253",
+            "mac": "52:31:2d:b6:1f:3f",
+            "name": "xrd3",
+            "ports": [
+                {
+                    "bw": 10,
+                    "delay": 5,
+                    "name": "xrd3-eth0",
+                    "network": "net2"
+                }
+            ],
+            "type": "xrd"
+        }
+    ],
+    "link": [
+        {
+            "dst": "s1-eth1",
+            "src": "rucio-eth0",
+            "type": "intradomain"
+        },
+        {
+            "dst": "s2-eth1",
+            "src": "xrd1-eth0",
+            "type": "intradomain"
+        },
+        {
+            "dst": "s2-eth2",
+            "src": "s1-eth2",
+            "type": "intradomain"
+        },
+        {
+            "dst": "s3-eth1",
+            "src": "s1-eth3",
+            "type": "interdomain"
+        },
+        {
+            "dst": "s4-eth1",
+            "src": "s2-eth3",
+            "type": "interdomain"
+        },
+        {
+            "dst": "s3-eth2",
+            "src": "xrd2-eth0",
+            "type": "intradomain"
+        },
+        {
+            "dst": "s4-eth2",
+            "src": "xrd3-eth0",
+            "type": "intradomain"
+        },
+        {
+            "dst": "s4-eth3",
+            "src": "s3-eth3",
+            "type": "intradomain"
+        }
+    ],
+    "switch": [
+        {
+            "domain": "tcp:odl1:6653",
+            "name": "s1",
+            "opf_version": "OpenFlow13",
+            "ports": [
+                {
+                    "name": "lo"
+                },
+                {
+                    "bw": 10,
+                    "delay": 5,
+                    "name": "s1-eth1",
+                    "network": "net1"
+                },
+                {
+                    "bw": null,
+                    "delay": null,
+                    "name": "s1-eth2",
+                    "network": "net1"
+                },
+                {
+                    "bw": null,
+                    "delay": null,
+                    "name": "s1-eth3",
+                    "network": "interdomain"
+                }
+            ]
+        },
+        {
+            "domain": "tcp:odl1:6653",
+            "name": "s2",
+            "opf_version": "OpenFlow13",
+            "ports": [
+                {
+                    "name": "lo"
+                },
+                {
+                    "bw": 10,
+                    "delay": 5,
+                    "name": "s2-eth1",
+                    "network": "net1"
+                },
+                {
+                    "bw": null,
+                    "delay": null,
+                    "name": "s2-eth2",
+                    "network": "net1"
+                },
+                {
+                    "bw": null,
+                    "delay": null,
+                    "name": "s2-eth3",
+                    "network": "interdomain"
+                }
+            ]
+        },
+        {
+            "domain": "tcp:odl2:6653",
+            "name": "s3",
+            "opf_version": "OpenFlow13",
+            "ports": [
+                {
+                    "name": "lo"
+                },
+                {
+                    "bw": null,
+                    "delay": null,
+                    "name": "s3-eth1",
+                    "network": "interdomain"
+                },
+                {
+                    "bw": 10,
+                    "delay": 5,
+                    "name": "s3-eth2",
+                    "network": "net2"
+                },
+                {
+                    "bw": null,
+                    "delay": null,
+                    "name": "s3-eth3",
+                    "network": "net2"
+                }
+            ]
+        },
+        {
+            "domain": "tcp:odl2:6653",
+            "name": "s4",
+            "opf_version": "OpenFlow13",
+            "ports": [
+                {
+                    "name": "lo"
+                },
+                {
+                    "bw": null,
+                    "delay": null,
+                    "name": "s4-eth1",
+                    "network": "interdomain"
+                },
+                {
+                    "bw": 10,
+                    "delay": 5,
+                    "name": "s4-eth2",
+                    "network": "net2"
+                },
+                {
+                    "bw": null,
+                    "delay": null,
+                    "name": "s4-eth3",
+                    "network": "net2"
+                }
+            ]
+        }
+    ]
+}
