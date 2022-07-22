@@ -13,34 +13,6 @@ ALTO_CONTENT_TYPE_ECS = 'application/alto-endpointcost+json'
 ALTO_CONTENT_TYPE_PROPMAP = 'application/alto-propmap+json'
 
 
-def _verify_address(addr):
-    try:
-        socket.inet_aton(addr)
-        return True
-    except (socket.error, UnicodeEncodeError, TypeError):
-        return False
-
-
-def fetch_ip():
-    """
-    fetch ip from Internet
-    """
-    for url in IP_URLS:
-        try:
-            req = requests.get(url, timeout=5)
-            if req.status_code == 200:
-                data = req.text.strip()
-                if data is None or not _verify_address(data):
-                    continue
-                else:
-                    return data
-            else:
-                raise ConnectionError
-        except (Timeout, ConnectionError):
-            print('Could not fetch public ip from %s', url)
-    return None
-
-
 def get_content(post_data, service_name, host_name):
     """
     post_data:
