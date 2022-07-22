@@ -10,7 +10,7 @@ HEADER_CTYPE = 'Content-Type'
 HEADER_ID = 'Content-ID'
 ALTO_CONTENT_TYPE_ECS = 'application/alto-endpointcost+json'
 ALTO_CONTENT_TYPE_PROPMAP = 'application/alto-propmap+json'
-
+PREFIX_INET4 = "ipv4:"
 
 def get_content(pv, post_data, service_name, host_name):
     """
@@ -22,12 +22,12 @@ def get_content(pv, post_data, service_name, host_name):
     if 'endpoints' in post_data:
         srcs = post_data['endpoints']['srcs']
         dsts = post_data['endpoints']['dsts']
-        pairs = {(src, dst) for src in srcs for dst in dsts}
+        pairs = {(src.lstrip(PREFIX_INET4), dst.lstrip(PREFIX_INET4)) for src in srcs for dst in dsts}
     elif 'endpoint-flows' in post_data:
         pairs = set()
         for spec in post_data['endpoint-flows']:
             srcs, dsts = spec['srcs'], spec['dsts']
-            pairs |= {(src, dst) for src in srcs for dst in dsts}
+            pairs |= {(src.lstrip(PREFIX_INET4), dst.lstrip(PREFIX_INET4)) for src in srcs for dst in dsts}
 
     assert 'cost-type' in post_data
     cost_type = post_data['cost-type']

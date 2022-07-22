@@ -61,42 +61,65 @@
         {
             "dst": "s1-eth1",
             "src": "rucio-eth0",
-            "type": "intradomain"
+            "type": "intradomain",
+            "bw": 10,
+            "delay": 5
         },
         {
             "dst": "s2-eth1",
             "src": "xrd1-eth0",
-            "type": "intradomain"
+            "type": "intradomain",
+            "bw": 10,
+            "delay": 5
+
         },
         {
             "dst": "s2-eth2",
             "src": "s1-eth2",
-            "type": "intradomain"
+            "type": "intradomain",
+            "bw": 10,
+            "delay": 5
+
         },
         {
             "dst": "s3-eth1",
             "src": "s1-eth3",
-            "type": "interdomain"
+            "type": "interdomain",
+            "bw": 10,
+            "delay": 5
+
         },
         {
             "dst": "s4-eth1",
             "src": "s2-eth3",
-            "type": "interdomain"
+            "type": "interdomain",
+            "bw": 10,
+            "delay": 5
+
         },
         {
             "dst": "s3-eth2",
             "src": "xrd2-eth0",
-            "type": "intradomain"
+            "type": "intradomain",
+            "bw": 10,
+            "delay": 5
+
         },
         {
             "dst": "s4-eth2",
             "src": "xrd3-eth0",
-            "type": "intradomain"
+            "type": "intradomain",
+            "bw": 10,
+            "delay": 5
+
         },
         {
             "dst": "s4-eth3",
             "src": "s3-eth3",
-            "type": "intradomain"
+            "type": "intradomain",
+            "bw": 10,
+            "delay": 5
+
         }
     ],
     "switch": [

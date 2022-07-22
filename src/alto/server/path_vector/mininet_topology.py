@@ -1,44 +1,12 @@
 from pprint import pprint
-from ofrule import Switch
+from .ofrule import Switch
 import requests
 import networkx
 import matplotlib.pyplot as plt
 
-MININET_URL = "http://localhost:8000/mininet-topology.json"
-# MININET_URL = "http://localhost:9090/topology"
-# FLOW_RULES = [
-#     {
-#         "name": "s1",
-#         "rules": [
-#             {"match": {"ingress": "s1-eth1"}, "actions": ["s1-eth2", "s1-eth3"], "priority": 2},
-#             {"match": {"ingress": "s1-eth2"}, "actions": ["s1-eth1", "s1-eth3"], "priority": 2},
-#             {"match": {"ingress": "s1-eth3"}, "actions": ["s1-eth1", "s1-eth2"], "priority": 2}
-#         ]
-#     },
-#     {
-#         "name": "s2",
-#         "rules": [
-#             {"match": {"ingress": "s2-eth1"}, "actions": ["s2-eth2", "s2-eth3"], "priority": 2},
-#             {"match": {"ingress": "s2-eth2"}, "actions": ["s2-eth1", "s2-eth3"], "priority": 2},
-#             {"match": {"ingress": "s2-eth3"}, "actions": ["s2-eth1", "s2-eth2"], "priority": 2}
-#         ]
-#     },
-#     {
-#         "name": "s3",
-#         "rules": [
-#             {"match": {"ingress": "s3-eth1"}, "actions": ["s3-eth2"], "priority": 2},
-#             {"match": {"ingress": "s3-eth2"}, "actions": ["s3-eth1"], "priority": 2},
-#         ]
-#     },
-#     {
-#         "name": "s4",
-#         "rules": [
-#             {"match": {"ingress": "s4-eth1"}, "actions": ["s4-eth2"], "priority": 2},
-#             {"match": {"ingress": "s4-eth2"}, "actions": ["s4-eth1"], "priority": 2},
-#         ]
-#     }
-# ]
+MININET_URL = "http://%s/mininet-topology.json"
 
+META_LINK_FIELDS = ['src', 'dst', 'type']
 
 def get_topology(url):
     json_topo = requests.get(url).json()
@@ -48,10 +16,15 @@ def get_topology(url):
     for switch in json_topo['switch']:
         g.add_node(switch['name'], **switch)
     for link in json_topo['link']:
-        link.update({'intfs': {link['src'], link['dst']}})
-        link['src'] = link['src'].split('-')[0]
-        link['dst'] = link['dst'].split('-')[0]
-        g.add_edge(link['src'], link['dst'], **link)
+        print('link: ', link)
+        # move topology information as meta
+        meta_link = {}
+        meta_link['intfs'] = { link['src'], link['dst'] }
+        meta_link['src'] = link['src'].split('-')[0]
+        meta_link['dst'] = link['dst'].split('-')[0]
+        meta_link['type'] = link['type']
+        meta_link['attributes'] = { k: link[k] for k in link.keys() if k not in META_LINK_FIELDS }
+        g.add_edge(meta_link['src'], meta_link['dst'], **meta_link)
     return g
 
 
@@ -125,7 +98,7 @@ class MininetTopology:
 
 
 if __name__ == '__main__':
-    graph = get_topology(MININET_URL)
+    graph = get_topology(MININET_URL % ('127.0.0.1:8000'))
     mt = MininetTopology(graph)
     mt.draw()
 
