@@ -8,7 +8,8 @@ from rest_framework.parsers import BaseParser
 from rest_framework.renderers import MultiPartRenderer
 
 # from  rest_framework.parsers import MultiPartParser
-ALTO_MEDIA_TYPE = 'application/alto-endpointcost+json'
+# ALTO_MEDIA_TYPE = 'application/alto-endpointcost+json'
+ALTO_MEDIA_TYPE = 'application/alto-endpointcostparams+json'
 
 
 class MultiPartRelatedRender(MultiPartRenderer):
@@ -25,15 +26,7 @@ class MultiPartRelatedRender(MultiPartRenderer):
         super(MultiPartRelatedRender, self).__init__()
 
     def render(self, data, accepted_media_type=None, renderer_context=None):
-        # if hasattr(data, 'items'):
-        #     for key, value in data.items():
-        #         assert not isinstance(value, dict), (
-        #                 "Test data contained a dictionary value for key '%s', "
-        #                 "but multipart uploads do not support nested data. "
-        #                 "You may want to consider using format='json' in this "
-        #                 "test case." % key
-        #         )
-        # assert isinstance(data, list), "Data struct should be list"
+
         return self.encode_multipart(data)
 
     def encode_multipart(self, data):
@@ -41,18 +34,22 @@ class MultiPartRelatedRender(MultiPartRenderer):
             return force_bytes(s, settings.DEFAULT_CHARSET)
 
         lines = []
+        print(data)
 
         for item in data:
-            lines.extend(
-                to_bytes(val)
-                for val in [
-                    "--%s" % self.BOUNDARY,
-                    'content-type: %s' % item.get('content-type'),
-                    "content-id: {}".format(item.get('content-id')),
-                    "",
-                    json.dumps(item.get('data')),
-                ]
-            )
+            try:
+                lines.extend(
+                    to_bytes(val)
+                    for val in [
+                        "--%s" % self.BOUNDARY,
+                        'content-type: {}'.format(item.get('content-type')),
+                        "content-id: {}".format(item.get('content-id')),
+                        "",
+                        json.dumps(item.get('data')),
+                    ]
+                )
+            except:
+                return to_bytes(data.get('detail'))
 
         lines.extend(
             [
@@ -81,9 +78,10 @@ class AltoParser(BaseParser):
         """
         parser_context = parser_context or {}
         encoding = parser_context.get('encoding', settings.DEFAULT_CHARSET)
+
         try:
             decoded_stream = codecs.getreader(encoding)(stream)
             parse_constant = json.strict_constant if self.strict else None
             return json.load(decoded_stream, parse_constant=parse_constant)
         except ValueError as exc:
-            raise ParseError('AltoParser parse error - %s' % str(exc))
+            raise ParseError('JSON parse error - %s' % str(exc))

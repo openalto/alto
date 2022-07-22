@@ -9,10 +9,8 @@ class AltoView(APIView):
     renderer_classes = [MultiPartRelatedRender]
     parser_classes = [AltoParser]
 
-    # renderer_classes = [JSONRenderer]
-
     def get(self, request, path_vector):
-        # print('get')
+        print('get')
         print(request.headers)
         return Response({
 
@@ -20,7 +18,6 @@ class AltoView(APIView):
 
     def post(self, request, path_vector):
         post_data = dict(request.data)
-        # content_type = 'multipart/related; boundary=Alto; type=application/alto-endpointcost+json'
         content_type = self.renderer_classes[0]().get_context_type()
         host_name = fetch_ip()
         content = get_content(post_data, path_vector, host_name)
