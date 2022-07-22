@@ -3,7 +3,6 @@ import uuid
 
 import requests
 from requests.exceptions import Timeout, ConnectionError
-from alto.server.path_vector import adapter
 
 IP_URLS = ["http://whatismyip.akamai.com/", "http://wgetip.com/"]
 
@@ -13,7 +12,7 @@ ALTO_CONTENT_TYPE_ECS = 'application/alto-endpointcost+json'
 ALTO_CONTENT_TYPE_PROPMAP = 'application/alto-propmap+json'
 
 
-def get_content(post_data, service_name, host_name):
+def get_content(pv, post_data, service_name, host_name):
     """
     post_data:
     service_name: resource id of the service
@@ -40,7 +39,7 @@ def get_content(post_data, service_name, host_name):
     else:
         properties = []
 
-    paths, link_map = adapter.calculate_path_vector(pairs, properties)
+    paths, link_map = pv.lookup(pairs, properties)
 
     # prepare the ECS part
     ecs_part = {}
