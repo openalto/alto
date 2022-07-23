@@ -24,7 +24,7 @@ class MultiPartRelatedRender(MultiPartRenderer):
     type = ALTO_CONTENT_TYPE_ECS
     format = 'multipart'
     charset = 'utf-8'
-    BOUNDARY = 'Alto'
+    BOUNDARY = settings.BOUNDARY_STRING
 
     def __init__(self):
         super(MultiPartRelatedRender, self).__init__()

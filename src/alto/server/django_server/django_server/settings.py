@@ -123,3 +123,5 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 MININET_URL = 'http://127.0.0.1:8181/topology'
+
+BOUNDARY_STRING = '62f59eb2ec394a36bec324f743f64db2'
