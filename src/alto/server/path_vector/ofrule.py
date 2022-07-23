@@ -25,7 +25,9 @@ class Switch:
             self._rules.append(self.Rule(**r))
 
     def get_rules(self):
-        table = requests.get(TABLE_URL_FORMAT % (self._controller, self._name[1:])).json()
+        table_url = TABLE_URL_FORMAT % (self._controller, self._name[1:])
+        # FIXME: hard coded auth
+        table = requests.get(table_url, auth=('admin', 'admin'), headers={'accept': 'application/json'}).json()
         for flow in table['flow-node-inventory:table'][0]['flow']:
             match = {}
             for k in flow['match'].keys():
