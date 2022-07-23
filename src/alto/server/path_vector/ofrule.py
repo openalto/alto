@@ -3,9 +3,7 @@ import ipaddress
 # url_format % (address, vSwitch)
 import requests
 
-TABLE_URL_FORMAT = "http://localhost:8000/%s_openflow%s.json"
-# TABLE_URL_FORMAT = "http://%s:8181/restconf/operational/opendaylight-inventory:nodes/node/openflow:%s/table/0"
-
+TABLE_URL_FORMAT = "http://%s:8181/restconf/operational/opendaylight-inventory:nodes/node/openflow:%s/table/0"
 
 class Switch:
     """

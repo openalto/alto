@@ -122,4 +122,4 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-MININET_URL = 'http://127.0.0.1:8000/mininet-topology.json'
+MININET_URL = 'http://127.0.0.1:8181/topology'
