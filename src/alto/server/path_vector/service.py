@@ -1,9 +1,8 @@
-from .mininet_topology import MININET_URL, get_topology, MininetTopology
+from .mininet_topology import get_topology, MininetTopology
 
 class PathVectorService():
-    def __init__(self, mininet_host):
-        self.mininet_host = mininet_host
-        graph = get_topology(MININET_URL % (mininet_host))
+    def __init__(self, mininet_url):
+        graph = get_topology(mininet_url)
         self.topology = MininetTopology(graph)
 
     def lookup(self, pairs, property_names):

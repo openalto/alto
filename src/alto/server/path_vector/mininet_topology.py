@@ -4,9 +4,8 @@ import requests
 import networkx
 import matplotlib.pyplot as plt
 
-MININET_URL = "http://%s/mininet-topology.json"
-
 META_LINK_FIELDS = ['src', 'dst', 'type']
+LINK_ATTRIBUTES = { 'bw': 'bandwidth', 'latency': 'latency' }
 
 def get_topology(url):
     json_topo = requests.get(url).json()
@@ -20,11 +19,19 @@ def get_topology(url):
         # move topology information as meta
         meta_link = {}
         meta_link['intfs'] = { link['src'], link['dst'] }
-        meta_link['src'] = link['src'].split('-')[0]
-        meta_link['dst'] = link['dst'].split('-')[0]
+        src_dev = link['src'].split('-')[0]
+        dst_dev = link['dst'].split('-')[0]
+        meta_link['src'] = src_dev
+        meta_link['dst'] = dst_dev
         meta_link['type'] = link['type']
-        meta_link['attributes'] = { k: link[k] for k in link.keys() if k not in META_LINK_FIELDS }
-        g.add_edge(meta_link['src'], meta_link['dst'], **meta_link)
+
+        # get bandwidth and latency from port (src_dev, link['src'])
+        node = g.nodes[src_dev]
+        port = [p for p in node['ports'] if p['name'] == link['src']][0]
+        print(port)
+        meta_link['attributes'] = { LINK_ATTRIBUTES[k]: port[k] for k in LINK_ATTRIBUTES if k in port }
+
+        g.add_edge(src_dev, dst_dev, **meta_link)
     return g
 
 
@@ -98,7 +105,7 @@ class MininetTopology:
 
 
 if __name__ == '__main__':
-    graph = get_topology(MININET_URL % ('127.0.0.1:8000'))
+    graph = get_topology('http://127.0.0.1:8000/mininet-topology')
     mt = MininetTopology(graph)
     mt.draw()
 

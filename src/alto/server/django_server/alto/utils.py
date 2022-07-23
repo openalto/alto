@@ -34,7 +34,7 @@ def get_content(pv, post_data, service_name, host_name):
     assert cost_type['cost-mode'] == 'array'
     assert cost_type['cost-metric'] == 'ane-path'
 
-    if 'ane-property-names' not in post_data:
+    if 'ane-property-names' in post_data:
         properties = post_data['ane-property-names']
     else:
         properties = []
@@ -67,6 +67,7 @@ def get_content(pv, post_data, service_name, host_name):
         ane_name = '.ane:%s' % (ane)
         ane_props = link_map[ane]
         props = properties if len(properties) > 0 else ane_props.keys()
+        print(props)
         property_map[ane_name] = {pn: ane_props[pn] for pn in props if pn in ane_props}
     data['property-map'] = property_map
 
