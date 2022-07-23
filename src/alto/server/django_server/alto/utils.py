@@ -68,7 +68,7 @@ def get_content(pv, post_data, service_name, host_name):
         ane_props = link_map[ane]
         props = properties if len(properties) > 0 else ane_props.keys()
         print(props)
-        property_map[ane_name] = {pn: ane_props[pn] for pn in props if pn in ane_props}
+        property_map[ane_name] = {pn: ane_props[pn] for pn in props if ane_props.get(pn) is not None}
     data['property-map'] = property_map
 
     prop_part['data'] = data
