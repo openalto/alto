@@ -7,7 +7,7 @@ from .utils import get_content
 
 from alto.server.path_vector.service import PathVectorService
 
-pv = PathVectorService(conf_settings.MININET_URL)
+pv = PathVectorService(conf_settings.MININET_URL, conf_settings.OPENDAYLIGHT_CREDENTIALS)
 
 class AltoView(APIView):
     renderer_classes = [MultiPartRelatedRender]

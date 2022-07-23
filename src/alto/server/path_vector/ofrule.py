@@ -11,7 +11,8 @@ class Switch:
     ports - a list of ports
     """
 
-    def __init__(self, name, domain, opf_version, ports):
+    def __init__(self, credentials, name, domain, opf_version, ports):
+        self.credentials = credentials
         self._name = name
         self._domain = domain
         self._controller = self._domain.split(":")[1]
@@ -26,8 +27,8 @@ class Switch:
 
     def get_rules(self):
         table_url = TABLE_URL_FORMAT % (self._controller, self._name[1:])
-        # FIXME: hard coded auth
-        table = requests.get(table_url, auth=('admin', 'admin'), headers={'accept': 'application/json'}).json()
+        auth = self.credentials[self._controller]
+        table = requests.get(table_url, auth=(auth[0], auth[1]), headers={'accept': 'application/json'}).json()
         for flow in table['flow-node-inventory:table'][0]['flow']:
             match = {}
             for k in flow['match'].keys():

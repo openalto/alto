@@ -36,11 +36,11 @@ def get_topology(url):
 
 
 class MininetTopology:
-    def __init__(self, graph):
+    def __init__(self, graph, credentials):
         self.graph = graph
         self.nodes = graph.nodes()
         self.hosts = [n for n in self.nodes if 1 == networkx.degree(graph, n)]
-        self.switches = [Switch(**self.nodes[n]) for n in self.nodes if 1 != networkx.degree(graph, n)]
+        self.switches = [Switch(credentials, **self.nodes[n]) for n in self.nodes if 1 != networkx.degree(graph, n)]
         self.edges = graph.edges()
 
     def get_hostname_by_ip(self, ip):

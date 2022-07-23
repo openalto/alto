@@ -1,4 +1,4 @@
-from flask import Flask, make_response, send_file
+from flask import Flask, make_response, send_file, request
 
 app = Flask(__name__)
 
@@ -9,6 +9,7 @@ def mn_topo():
 @app.route('/restconf/operational/opendaylight-inventory:nodes/node/openflow:<swid>/table/0')
 def of_table(swid):
     print(swid)
+    print(request.authorization)
     return send_file('openflow%s.json' % (swid))
 
 if __name__ == '__main__':

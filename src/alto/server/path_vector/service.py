@@ -1,9 +1,9 @@
 from .mininet_topology import get_topology, MininetTopology
 
 class PathVectorService():
-    def __init__(self, mininet_url):
+    def __init__(self, mininet_url, credentials):
         graph = get_topology(mininet_url)
-        self.topology = MininetTopology(graph)
+        self.topology = MininetTopology(graph, credentials)
 
     def lookup(self, pairs, property_names):
         print(pairs)
