@@ -1,0 +1,106 @@
+
+250
+rucio ---- s1 ---- s2 ------ xrd1 (251)
+            |       | 
+ xrd2 ---- s3 ---- s4 ------ xrd3 (253)
+252
+
+
+http://10.0.0.249:8080/alto/pv
+
+input (client -> server): (flask)
+
+
+POST HTTP/1.1
+content-type: application/alto-endpointfilter+json
+accept: application/alto-endpointcost+json
+content-length: ...
+
+{
+  "cost-type": {
+    "cost-metric": "ane-path",
+    "cost-mode": "array"
+  },
+  "endpoint-flows": [
+     {
+        "srcs": [ "ipv4:10.0.0.252" ],
+        "dsts": [ "ipv4:10.0.0.251", "ipv4:10.0.0.253" ]
+     },
+     {
+        "srcs": [ "ipv4:10.0.0.251" ],
+        "dsts": [ "ipv4:10.0.0.253" ]
+     }
+  ],
+  "ane-property-names": [ "bandwidth", "latency" ]
+}
+
+HTTP/1.1 200 OK
+content-type: multipart/related; boundary=xxx; type=application/alto-endpointcost+json (same as accept in the request)
+content-length: ...
+
+--xxx
+
+content-id: <endpointcost@10.0.0.249>
+content-type: application/alto-endpointcost+json
+
+{
+   "meta": {
+     "vtag": {
+       "resource-id": "pv.ecs",
+       "tag": "ec137bb78118468c853d5b622ac003f1"
+     },
+     "cost-type": {
+       "cost-metric": "ane-path",
+       "cost-mode": "array"
+     }
+   },
+   "endpoint-cost-map": {
+     "ipv4:10.0.0.252": {
+       "ipv4:10.0.0.251": [ "L1", "L2", "L3", "L4" ],
+       "ipv4:10.0.0.253": [ "L1", "L2", "L5" ]
+     },
+     "ipv4:10.0.0.251": {
+       "ipv4:10.0.0.253": [ "L6", "L7", "L5" ]
+     }
+   }
+}
+
+--xxx
+
+content-id: <propmap@10.0.0.249>
+content-type: application/alto-propmap+json
+
+{
+   "meta": {
+       "dependent-vtags": [
+         {
+           "resource-id": "pv.ecs",
+           "tag": "ec137bb78118468c853d5b622ac003f1"
+         }
+       ]
+     },
+   "property-map": {
+     ".ane:L1": {
+        "bandwidth": 100000000,
+        "latency": 5
+     },
+     ".ane:L2": {
+     }
+     
+     ...
+     ".ane:L7": {
+       ....
+     }
+   }
+}
+
+
+
+- How to compute the paths for each (src, dst) pair based on the information collected from ODL?
+
+- Design 1: merge the information colllected from multiple domains
+  - assumption: ALTO server can query the flow rules from different controllers
+  - algorithm:
+    start from the source, simulate the forwarding process until the destination is reached
+- Design 2: each ALTO server can see only the information from a single domain
+  - border switch/router identifier
