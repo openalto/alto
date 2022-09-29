@@ -6,8 +6,15 @@ from .render import MultiPartRelatedRender, AltoParser
 from .utils import get_content
 
 from alto.server.path_vector.service import PathVectorService
+from alto.server.lhcone_pv.service import CRIC, LookingGlass, LhconeALTOService
 
-pv = PathVectorService(conf_settings.MININET_URL, conf_settings.OPENDAYLIGHT_CREDENTIALS)
+if conf_settings.BACKEND == 'lhcone':
+    cric = CRIC(conf_settings.CRIC_DB_PATH)
+    lg = LookingGlass(conf_settings.LOOKING_GLASS_URI,
+                      default_router=conf_settings.DEFAULT_LOOKING_GLASS_ROUTER)
+    pv = LhconeALTOService(cric, lg, local_asn=conf_settings.LOCAL_ASN)
+else:
+    pv = PathVectorService(conf_settings.MININET_URL, conf_settings.OPENDAYLIGHT_CREDENTIALS)
 
 class AltoView(APIView):
     renderer_classes = [MultiPartRelatedRender]

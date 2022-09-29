@@ -128,4 +128,10 @@ OPENDAYLIGHT_CREDENTIALS = {
     'odl2': [ 'admin', 'admin' ]
 }
 
+BACKEND = 'pv'
+CRIC_DB_PATH = 'https://wlcg-cric.cern.ch/api/core/service/query/?json'
+LOOKING_GLASS_URI = 'http://lhcone-lg.cern.ch/lg.cgi'
+DEFAULT_LOOKING_GLASS_ROUTER = 'ex2j.cern.ch:juniper'
+LOCAL_ASN = 513
+
 BOUNDARY_STRING = '62f59eb2ec394a36bec324f743f64db2'
