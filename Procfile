@@ -1,1 +1,1 @@
-web: python -m alto.server.django_server.manage runserver 80
+web: gunicorn alto.server.django_server.django_server.wsgi
