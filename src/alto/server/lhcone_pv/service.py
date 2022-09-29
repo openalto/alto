@@ -24,7 +24,7 @@ class CRIC(object):
                 self.cric_dict = json.load(f_cric)
 
         for rcsite_name, rcsite_obj in self.cric_dict.items():
-            netroutes = rcsite_obj['netroutes']
+            netroutes = rcsite_obj.get('netroutes', dict())
             for _, netroute in netroutes.items():
                 for _, ipprefixes in netroute['networks'].items():
                     for ipprefix in ipprefixes:
@@ -32,6 +32,7 @@ class CRIC(object):
                             'rcsite': rcsite_name,
                             'netroute': netroute
                         }
+        print('CRIC database loaded.')
 
     def find_netroute(self, ipaddr):
         ipnetwork = ipaddress.ip_network(ipaddr)
@@ -42,16 +43,16 @@ class CRIC(object):
         return None, None
 
     def find_netroute_by_asn(self, asn):
-        return sum([[n for n in rc['netroutes'].values() if n.get('asn') == asn] for rc in self.cric_dict.values()], start=[])
-    
+        return sum([[n for n in rc.get('netroutes', dict()).values() if n.get('asn') == asn] for rc in self.cric_dict.values()], start=[])
+
     def find_subnet_by_asn(self, asn):
         netroutes = self.find_netroute_by_asn(asn)
         subnets = PyTricia(128)
         for n in netroutes:
             for p in n['networks'].get('ipv4', []):
-                subnets[p] = None
+                subnets[p] = dict()
             for p in n['networks'].get('ipv6', []):
-                subnets[p] = None
+                subnets[p] = dict()
         return subnets
 
     def find_asn(self, ipaddr):
@@ -252,20 +253,21 @@ class CERNLookingGlass(LookingGlass):
         if entry:
             routes.append(entry)
         return routes
-                
+
 
 
 class LhconeALTOService:
 
-    def __init__(self, cric: CRIC, lg: LookingGlass, local_asn: int) -> None:
+    def __init__(self, cric: CRIC, lg: LookingGlass, local_asn: int, refresh_time=None) -> None:
         """
         """
         self.cric = cric
         self.lg = lg
         self.asn = local_asn
-        self.fetch_routes() 
+        self.fetch_routes()
         self.fetch_scope()
         self.fetch_capacity()
+        # TODO: async update
 
     def lookup(self, pairs, property_names):
         """
@@ -289,14 +291,17 @@ class LhconeALTOService:
             }
         }
         """
+        print(pairs)
         paths = dict()
         as_path_dict = dict()
         as_path_idx = 0
         nh_dict = dict()
         nh_idx = 0
         property_map = dict()
+        print(self.scope.keys())
         for src, dst in pairs:
             if src not in self.scope:
+                print(src)
                 continue
             if src not in paths:
                 paths[src] = dict()
@@ -341,7 +346,7 @@ class LhconeALTOService:
                 property_map[as_path_ane]['as_path'] = as_path
             as_path_ane = as_path_dict[as_path]
             path.append(as_path_ane)
-            
+
             dst_site = dst_netroute['netroute']['netsite']
             dst_ane = 'ane:S_%s' % dst_site
             path.append(dst_ane)
@@ -356,6 +361,7 @@ class LhconeALTOService:
 
     def fetch_routes(self):
         self.routes = self.lg.get_all_routes(selected=True)
+        print('Looking glass routing table loaded.')
 
     def fetch_scope(self):
         self.scope = self.cric.find_subnet_by_asn(self.asn)
