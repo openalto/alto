@@ -24,6 +24,8 @@ for ns, ns_config in conf_settings.DB_CONFIG.items():
             db = ForwardingDB(namespace=ns, **db_config)
         elif db_type == 'endpoint':
             db = EndpointDB(namespace=ns, **db_config)
+        else:
+            db = None
         if db:
             data_broker_manager.register(ns, db_type, db)
 

@@ -38,7 +38,7 @@ class DataBrokerManager(object):
 
     def get(self, namespace, db_type):
         """
-        Get a registered data borker.
+        Get a registered data broker.
 
         Parameters
         ----------

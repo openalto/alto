@@ -2,201 +2,49 @@ import re
 import ipaddress
 import requests
 import json
+from service import Service
 
 from lxml import html
 from pytricia import PyTricia
 
-from .db import data_broker_manager, ForwardingRule, Match, Action
+from alto.common.logging import fail_with_msg
+from logging import FATAL
 
+from .db import DataBroker, data_broker_manager, ForwardingRule, Match, Action
+
+class DBInfo:
+    def __init__(self, host: str, port: int, credentials = ''):
+        self.host = host
+        self.port = port
+        self.credentials = credentials
+
+MISSING_FIELD_MSG = '%s field is mandatory to configure Agent %s'
 
 class DataSourceAgent:
     """
     Base class of the data source agent.
+
+    The base class must be configured with attributes to connect to
+    the data store, and a namespace.
     """
 
-    def __init__(self, namespace='default', db_types=[], **kwargs):
-        self.db = [data_broker_manager.get(namespace, t) for t in db_types]
+    def __init__(self, dbinfo, agent_name, namespace):
+        self.dbinfo = dbinfo
+        self.agent_name = agent_name
+        self.namespace = namespace
+        # FIXME: use connection instead of data_broker_manager
+        self.dbm = data_broker_manager
 
-    def update(self):
-        """
-        This method should be called by a centralized scheduler.
-        """
-        raise NotImplementedError
+    def request_db(self, db_type: str):
+        return self.dbm.get(self.namespace, db_type)
 
+    def ensure_field(self, cfg, field):
+        if field not in cfg:
+            fail_with_msg(FATAL, MISSING_FIELD_MSG % (field, self.agent_name))
+        return cfg[field]
 
-class LookingGlassAgent(DataSourceAgent):
-    """
-    Class of data source agent for looking glass server.
-    """
-
-    def __init__(self, uri, namespace='default', listened_routers=set(),
-                 default_router=None, refresh_interval=None, proxies=None, **kwargs):
-        super().__init__(namespace, db_types=['forwarding', 'endpoint'])
-        self.uri = uri
-        self.router = default_router
-        self.proxies = proxies
-        self.refresh_interval = refresh_interval
-        self.listened_routers = set(listened_routers)
-        if not self.listened_routers:
-            self.listened_routers.add(default_router)
-        if default_router:
-            eb_trans = self.db[1].new_transaction()
-            default_sw = {'dpid': default_router, 'in_port': '0'}
-            eb_trans.add_property('0.0.0.0/0', default_sw)
-            eb_trans.commit()
-
-    def _parse_route(self, route_str):
-        routes = list()
-        entry = dict()
-        for rline in route_str.splitlines():
-            line = rline.strip()
-            if not line and entry:
-                routes.append(entry)
-                entry = dict()
-            if line.startswith('BGP') or line.startswith('*BGP'):
-                if entry:
-                    routes.append(entry)
-                entry = dict()
-                if line.startswith('*'):
-                    entry['selected'] = True
-                line = line[4:].strip()
-            # Parse line to BGP route attributes
-            if line.startswith('Peer AS:'):
-                asn = int(line[8:].strip())
-                entry['asn'] = asn
-            elif line.startswith('AS path:'):
-                as_path = [asn for asn in line[8:].strip().split(' ')]
-                entry['as_path'] = as_path
-            elif line.startswith('Communities:'):
-                communities = line[12:].strip().split(' ')
-                entry['communities'] = communities
-            elif line.startswith('Next hop:') and line.endswith(', selected'):
-                next_hop_entry = line[10:-10].split(' via ')
-                entry['next_hop'] = next_hop_entry[0]
-                if len(next_hop_entry) > 1:
-                    entry['outgoing_interface'] = next_hop_entry[1]
-        return routes
-
-    def _do_query(self, query='route', router=None, args=None):
-        data = requests.post(self.uri,
-                             data={
-                                'query': query,
-                                'args': args,
-                                'router': router or self.router,
-                                'submit': 'Submit'
-                             }, proxies=self.proxies)
-        doctree = html.fromstring(data.content)
-        query_result = doctree.xpath('//pre[1]')
-        return ''.join([r for r in query_result[0].itertext()])
-
-    def _parse_all_routes(self, route_str, width=19, route_dict=PyTricia(128)):
-        routes = list()
-        route = dict()
-        entry_found = False
-        for line in route_str.splitlines():
-            prefix = None
-            try:
-                match_prefix = re.match('^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\.|(\\/(([12]?[0-9])|(3[0-2]))$))){4}', line)
-                if match_prefix:
-                    prefix = match_prefix.group()
-                else:
-                    prefix = ipaddress.ip_network(line[:width].strip()).exploded
-            except ValueError:
-                pass
-            if prefix:
-                routes = list()
-                route_dict[prefix] = routes
-                entry_found = True
-            if not entry_found:
-                continue
-            line = line[width:].strip()
-            match_bgp = re.match('^(.?)\[BGP.*\].*, localpref (.*), from (.*)$', line)
-            if match_bgp:
-                route = dict()
-                routes.append(route)
-                selected, localpref, peer = match_bgp.groups()
-                if selected == '*' or selected == '+':
-                    route['selected'] = True
-                route['preference'] = int(localpref)
-                route['peer'] = peer
-            match_aspath = re.match('^AS path: (.*), validation-state: .*$', line)
-            if match_aspath:
-                as_path = match_aspath.groups()[0]
-                route['as_path'] = [asn for asn in as_path.split(' ')]
-            match_nh = re.match('> to (.*) via (.*)', line)
-            if match_nh:
-                next_hop, out_int = match_nh.groups()
-                route['next_hop'] = next_hop
-                route['outgoing_interface'] = out_int
-        return route_dict
-
-    def get_route(self, ipprefix, router=None, selected=False):
-        """
-        Get a single route entry.
-
-        Parameters
-        ----------
-        ipprefix : str
-            Destination IP prefix to lookup.
-        router : str
-            Name of the looking glass router. If None, `default_router` will be
-            used.
-        selected : bool
-            Whether only return the selected route or not.
-
-        Returns
-        -------
-        routes : list
-            All the route entries for the given destination IP prefix.
-        """
-        route_str = self._do_query(query='route', router=router, args=ipprefix)
-        routes = self._parse_route(route_str)
-        if selected:
-            routes = [r for r in routes if r.get('selected')]
-        return routes
-
-    def get_all_routes(self, router=None, selected=False):
-        """
-        Get routes for all reachable prefixes.
-
-        Parameters
-        ----------
-        router : str
-            Name of the looking glass router. If None, `default_router` will be
-            used.
-        selected : bool
-            Whether only return selected routes or not.
-
-        Returns
-        -------
-        routes : dict
-            A dictionary mapping each reachable prefix to a list of route
-            entries.
-        """
-        route_str = self._do_query(query='routes4', router=router)
-        routes = self._parse_all_routes(route_str, route_dict=dict())
-        route_str = self._do_query(query='routes6', router=router)
-        routes = self._parse_all_routes(route_str, route_dict=routes)
-        if selected:
-            for p in routes:
-                routes[p] = [r for r in routes[p] if r.get('selected')]
-        return routes
-
-    def update(self):
-        fib_trans = self.db[0].new_transaction()
-        for _router in self.listened_routers:
-            routes = self.get_all_routes(_router, selected=True)
-            for dst_prefix, route in routes.items():
-                if route:
-                    route = route[0]
-                else:
-                    continue
-                pkt_match = Match(dst_prefix)
-                action = Action(**route)
-                rule = ForwardingRule(pkt_match, action)
-                fib_trans.add_rule(_router, rule)
-        fib_trans.commit()
-
+    def run(self):
+        raise NotImplementedError()
 
 class CRICAgent(DataSourceAgent):
 
@@ -226,3 +74,12 @@ class CRICAgent(DataSourceAgent):
                         if asn == self.local_asn:
                             eb_trans.add_property(ipprefix, {'is_local': True})
         eb_trans.commit()
+
+class AgentService(Service):
+
+    def __init__(self, agent_name, pid_dir, agent_instance=None):
+        super().__init__(agent_name, pid_dir)
+        self.agent = agent_instance
+
+    def run(self):
+        self.agent.run()
