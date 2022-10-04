@@ -1,8 +1,8 @@
-from .db import data_broker_manager, ForwardingRule, Match, Action
+from .db import data_broker_manager
 
 class PathVectorService:
 
-    def __init__(self, namespace) -> None:
+    def __init__(self, namespace, autoreload=True) -> None:
         """
         """
         self.ns = namespace
@@ -37,6 +37,9 @@ class PathVectorService:
         propery_map : dict
             Mapping from ane to properties.
         """
+        if self.autoreload:
+            self.fib.build_cache()
+            self.eb.build_cache()
         paths = dict()
         as_path_dict = dict()
         as_path_idx = 0

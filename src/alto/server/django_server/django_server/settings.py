@@ -139,35 +139,41 @@ REFRESH_TIME = 300
 DB_CONFIG = {
     "default": {
         "forwarding": {
-            "backend": "local"
+            "backend": "redis",
+            "host": "localhost",
+            "port": 6379,
+            "db": 0
         },
         "endpoint": {
-            "backend": "local"
+            "backend": "redis",
+            "host": "localhost",
+            "port": 6379,
+            "db": 0
         }
     }
 }
 
-LOOKING_GLASS_AGENT_CONFIG = {
-    "namespace": "default",
-    "uri": 'http://lhcone-lg.cern.ch/lg.cgi',
-    "default_router": 'ex2j.cern.ch:juniper',
-    "db_conn": {
-        "host": "localhost",
-        "port": 6379,
-        "db": 0
-    }
-}
+# LOOKING_GLASS_AGENT_CONFIG = {
+#     "namespace": "default",
+#     "uri": 'http://lhcone-lg.cern.ch/lg.cgi',
+#     "default_router": 'ex2j.cern.ch:juniper',
+#     "db_conn": {
+#         "host": "localhost",
+#         "port": 6379,
+#         "db": 0
+#     }
+# }
 
-CRIC_AGENT_CONFIG = {
-    "namespace": "default",
-    "uri": 'https://wlcg-cric.cern.ch/api/core/rcsite/query/?json',
-    "local_asn": 513,
-    "db_conn": {
-        "host": "localhost",
-        "port": 6379,
-        "db": 0
-    }
-}
+# CRIC_AGENT_CONFIG = {
+#     "namespace": "default",
+#     "uri": 'https://wlcg-cric.cern.ch/api/core/rcsite/query/?json',
+#     "local_asn": 513,
+#     "db_conn": {
+#         "host": "localhost",
+#         "port": 6379,
+#         "db": 0
+#     }
+# }
 
 DEFAULT_NAMESPACE = "default"
 

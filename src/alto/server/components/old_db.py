@@ -1,6 +1,5 @@
 import hashlib
 import json
-import uuid
 
 from pytricia import PyTricia
 
@@ -113,7 +112,6 @@ class DataBroker:
 
     def __init__(self, namespace='default', backend='redis', **kwargs):
         self.ns = namespace
-        self.backend = backend
         if backend == 'local':
             self._backend = LocalDB(**kwargs)
         elif backend == 'redis':
@@ -140,21 +138,10 @@ class DataBroker:
         Value
 
         """
+        # key_hash = hashlib.sha256()
+        # key_hash.update(json.dumps(kwargs, sort_keys=True).encode())
         full_key = '{}:{}'.format(self.ns, key)
         return self._backend.get(full_key)
-
-    def _parse_key(self, key):
-        componets = key.split(':')
-        return ':'.join(componets[2:-1]), ':'.join(componets[1:])
-
-    def build_cache(self):
-        """
-        Build local cache of remote database for efficient lookup.
-        """
-        # TODO: Separate read capability (`build_cache` and `lookup`) and write
-        # capability (`new_transaction`) into different classes
-        # TODO: Use pubsub feature to trigger `build_cache` method
-        raise NotImplementedError()
 
     def new_transaction(self):
         """
@@ -225,15 +212,6 @@ class ForwardingRule(object):
         self.pkt_match = pkt_match
         self.action = action
 
-    def to_dict(self):
-        rule = dict()
-        rule['match'] = self.pkt_match.to_dict()
-        rule['action'] = self.action.to_dict()
-        return rule
-
-    def to_json(self):
-        return json.dumps(self.to_dict(), sort_keys=True)
-
 
 class ForwardingDB(DataBroker):
     """
@@ -244,30 +222,6 @@ class ForwardingDB(DataBroker):
         self.type = 'forwarding'
         self._base = dict()
         super().__init__(namespace=namespace, backend=backend, **kwargs)
-
-    def build_cache(self):
-        _base = dict()
-        if self.backend == 'redis':
-            keys = self._backend.scan_iter(match='{}:{}'.format(self.ns, self.type))
-        else:
-            raise NotImplementedError()
-        for key in keys:
-            dpid, suffix_key = self._parse_key(key)
-            rule_json = self._backend.get(key)
-            rule_dict = json.loads(rule_json)
-            match_dict = rule_dict.get('match', dict())
-
-            if dpid not in _base:
-                _base[dpid] = PyTricia(128)
-            dst_prefix = match_dict.get('dst_prefix')
-            if dst_prefix not in _base[dpid]:
-                _base[dpid][dst_prefix] = dict()
-            in_port = match_dict.get('in_port')
-            if not in_port:
-                in_port = '0'
-            _base[dpid][dst_prefix][in_port] = suffix_key
-        for dpid in _base.keys():
-            self._base[dpid] = _base[dpid]
 
     def lookup(self, dpid, dst_ip, in_port='0', **pktattr):
         """
@@ -297,9 +251,7 @@ class ForwardingDB(DataBroker):
         hash_key = ingress_trie.get(in_port)
         if not hash_key:
             return Action()
-        rule_json = self._lookup(hash_key)
-        rule_dict = json.loads(rule_json)
-        action_dict = rule_dict.get('action', dict())
+        action_dict = self._lookup(hash_key)
         return Action(**action_dict)
 
     def new_transaction(self):
@@ -313,6 +265,8 @@ class Transaction:
 
     def __init__(self, db):
         self.db = db
+        # TODO: decouple database backend with high-level transaction
+        # abstraction
         self._pipe = self.db._backend.pipeline()
 
     def commit(self):
@@ -329,6 +283,7 @@ class ForwardingTransaction(Transaction):
 
     def __init__(self, db):
         super().__init__(db)
+        self._base = dict()
         self._dpids = set()
 
     def add_rule(self, dpid, rule: ForwardingRule):
@@ -342,17 +297,24 @@ class ForwardingTransaction(Transaction):
         rule : ForwardingRule
             A forwarding rule.
         """
-        if dpid not in self._dpids:
-            self._dpids.add(dpid)
-            if self.db.backend == 'redis':
-                keys = self.db._backend.scan_iter(match='{}:{}:{}:*'.format(self.db.ns, self.db.type, dpid))
-            else:
-                raise NotImplementedError()
-            self._pipe.delete(*keys)
-        full_key = '{}:{}:{}:{}'.format(self.db.ns, self.db.type, dpid, uuid.uuid1())
-        self._pipe.set(full_key, rule.to_json())
+        self._dpids.add(dpid)
+        if dpid not in self._base:
+            self._base[dpid] = PyTricia(128)
+        dst_prefix = rule.pkt_match.dst_prefix
+        if dst_prefix not in self._base[dpid]:
+            self._base[dpid][dst_prefix] = dict()
+        in_port = rule.pkt_match.in_port
+        if not in_port:
+            in_port = '0'
+        key = rule.pkt_match.to_hash()
+        self._base[dpid][dst_prefix][in_port] = key
+
+        full_key = '{}:{}'.format(self.db.ns, key)
+        self._pipe.set(full_key, rule.action.to_dict())
 
     def commit(self):
+        for dpid in self._dpids:
+            self.db._base[dpid] = self._base[dpid]
         self._pipe.execute()
 
 
@@ -365,26 +327,6 @@ class EndpointDB(DataBroker):
         self.type = 'endpoint'
         self._base = dict()
         super().__init__(namespace=namespace, backend=backend, **kwargs)
-
-    def build_cache(self):
-        _base = dict()
-        if self.backend == 'redis':
-            keys = self._backend.scan_iter(match='{}:{}'.format(self.ns, self.type))
-        else:
-            raise NotImplementedError()
-        for key in keys:
-            prop_name, suffix_key = self._parse_key(key)
-            prop_json = self._backend.get(key)
-            prop_dict = json.loads(prop_json)
-            endpoint = prop_dict.get('endpoint')
-            if not endpoint:
-                continue
-
-            if prop_name not in _base:
-                _base[prop_name] = PyTricia(128)
-            _base[prop_name][endpoint] = suffix_key
-        for prop_name in _base.keys():
-            self._base[prop_name] = _base[prop_name]
 
     def lookup(self, endpoint, property_names=None):
         """
@@ -410,9 +352,7 @@ class EndpointDB(DataBroker):
             if prop_trie:
                 hash_key = prop_trie.get(endpoint)
                 if hash_key:
-                    prop_json = self._lookup(hash_key)
-                    prop_dict = json.loads(prop_json)
-                    properties[prop_name] = prop_dict.get('val')
+                    properties[prop_name] = self._lookup(hash_key)
         return properties
 
     def new_transaction(self):
@@ -425,7 +365,7 @@ class EndpointTransaction(Transaction):
     """
     def __init__(self, db):
         super().__init__(db)
-        self.prop_names = set()
+        self._base = dict()
 
     def add_property(self, endpoint, properties):
         """
@@ -439,19 +379,17 @@ class EndpointTransaction(Transaction):
             Properties of the given endpoint.
         """
         for prop_name, prop_val in properties.items():
-            if prop_name not in self.prop_names:
-                self.prop_names.add(prop_name)
-                if self.db.backend == 'redis':
-                    keys = self.db._backend.scan_iter(match='{}:{}:{}:*'.format(self.db.ns, self.db.type, prop_name))
-                else:
-                    raise NotImplementedError()
-                self._pipe.delete(*keys)
+            if prop_name not in self._base:
+                self._base[prop_name] = PyTricia(128)
+            h = hashlib.sha256()
+            h.update('{} - {}'.format(prop_name, endpoint).encode())
+            key = h.hexdigest()
+            self._base[prop_name][endpoint] = key
 
-            full_key = '{}:{}:{}:{}'.format(self.db.ns, self.db.type, prop_name, uuid.uuid1())
-            prop_obj = dict()
-            prop_obj['endpoint'] = endpoint
-            prop_obj['val'] = prop_val
-            self._pipe.set(full_key, json.dumps(prop_obj, sort_keys=True))
+        full_key = '{}:{}'.format(self.db.ns, key)
+        self._pipe.set(full_key, prop_val)
 
     def commit(self):
+        for prop_name in self._base.keys():
+            self.db._base[prop_name] = self._base[prop_name]
         self._pipe.execute()
