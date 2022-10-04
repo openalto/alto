@@ -138,14 +138,15 @@ class DataBroker:
         Returns
         -------
         Value
-
         """
+        if type(key) is bytes:
+            key = key.decode()
         full_key = '{}:{}'.format(self.ns, key)
         return self._backend.get(full_key)
 
     def _parse_key(self, key):
-        componets = key.split(':')
-        return ':'.join(componets[2:-1]), ':'.join(componets[1:])
+        componets = key.split(b':')
+        return b':'.join(componets[2:-1]), b':'.join(componets[1:])
 
     def build_cache(self):
         """
@@ -248,7 +249,7 @@ class ForwardingDB(DataBroker):
     def build_cache(self):
         _base = dict()
         if self.backend == 'redis':
-            keys = self._backend.scan_iter(match='{}:{}'.format(self.ns, self.type))
+            keys = self._backend.scan_iter(match='{}:{}:*'.format(self.ns, self.type))
         else:
             raise NotImplementedError()
         for key in keys:
@@ -288,6 +289,8 @@ class ForwardingDB(DataBroker):
         -------
         Action
         """
+        if type(dpid) is str:
+            dpid = dpid.encode()
         dst_trie = self._base.get(dpid)
         if not dst_trie:
             return Action()
@@ -345,10 +348,11 @@ class ForwardingTransaction(Transaction):
         if dpid not in self._dpids:
             self._dpids.add(dpid)
             if self.db.backend == 'redis':
-                keys = self.db._backend.scan_iter(match='{}:{}:{}:*'.format(self.db.ns, self.db.type, dpid))
+                keys = list(self.db._backend.scan_iter(match='{}:{}:{}:*'.format(self.db.ns, self.db.type, dpid)))
             else:
                 raise NotImplementedError()
-            self._pipe.delete(*keys)
+            if len(keys) > 0:
+                self._pipe.delete(*keys)
         full_key = '{}:{}:{}:{}'.format(self.db.ns, self.db.type, dpid, uuid.uuid1())
         self._pipe.set(full_key, rule.to_json())
 
@@ -369,7 +373,7 @@ class EndpointDB(DataBroker):
     def build_cache(self):
         _base = dict()
         if self.backend == 'redis':
-            keys = self._backend.scan_iter(match='{}:{}'.format(self.ns, self.type))
+            keys = self._backend.scan_iter(match='{}:{}:*'.format(self.ns, self.type))
         else:
             raise NotImplementedError()
         for key in keys:
@@ -406,13 +410,15 @@ class EndpointDB(DataBroker):
         if property_names is None:
             property_names = self._base.keys()
         for prop_name in property_names:
+            if type(prop_name) is str:
+                prop_name = prop_name.encode()
             prop_trie = self._base.get(prop_name)
             if prop_trie:
                 hash_key = prop_trie.get(endpoint)
                 if hash_key:
                     prop_json = self._lookup(hash_key)
                     prop_dict = json.loads(prop_json)
-                    properties[prop_name] = prop_dict.get('val')
+                    properties[prop_name.decode()] = prop_dict.get('val')
         return properties
 
     def new_transaction(self):
@@ -442,10 +448,11 @@ class EndpointTransaction(Transaction):
             if prop_name not in self.prop_names:
                 self.prop_names.add(prop_name)
                 if self.db.backend == 'redis':
-                    keys = self.db._backend.scan_iter(match='{}:{}:{}:*'.format(self.db.ns, self.db.type, prop_name))
+                    keys = list(self.db._backend.scan_iter(match='{}:{}:{}:*'.format(self.db.ns, self.db.type, prop_name)))
                 else:
                     raise NotImplementedError()
-                self._pipe.delete(*keys)
+                if len(keys) > 0:
+                    self._pipe.delete(*keys)
 
             full_key = '{}:{}:{}:{}'.format(self.db.ns, self.db.type, prop_name, uuid.uuid1())
             prop_obj = dict()

@@ -6,6 +6,7 @@ class PathVectorService:
         """
         """
         self.ns = namespace
+        self.autoreload = autoreload
         self.fib = data_broker_manager.get(self.ns, db_type='forwarding')
         self.eb = data_broker_manager.get(self.ns, db_type='endpoint')
 
@@ -85,7 +86,7 @@ class PathVectorService:
             nh_ane = nh_dict[nh]
             path.append(nh_ane)
 
-            as_path = ' '.join(action.get('as_path', [])[:-1])
+            as_path = ' '.join(action.actions.get('as_path', [])[:-1])
             if as_path not in as_path_dict:
                 as_path_ane = 'ane:P_%d' % as_path_idx
                 as_path_idx += 1

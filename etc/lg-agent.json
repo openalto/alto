@@ -1,0 +1,7 @@
+{
+    "namespace": "default",
+    "agent_class": "alto.agent.cernlg.LookingGlassAgent",
+    "uri": "http://lhcone-lg.cern.ch/lg.cgi",
+    "default_router": "ex2j.cern.ch:juniper",
+    "refresh_interval": 300
+}
