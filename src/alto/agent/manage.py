@@ -28,7 +28,6 @@ def setup_debug_db():
                 db = None
             if db:
                 data_broker_manager.register(ns, db_type, db)
-    print(data_broker_manager.get('default', 'forwarding'))
 
 if __name__ == '__main__':
     import argparse
