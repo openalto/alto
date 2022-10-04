@@ -7,7 +7,7 @@ import time
 from lxml import html
 from pytricia import PyTricia
 
-from alto.server.components.datasource import AgentService, DBInfo, DataSourceAgent
+from alto.server.components.datasource import DBInfo, DataSourceAgent
 from alto.server.components.db import data_broker_manager, ForwardingRule, Match, Action
 
 class LookingGlassAgent(DataSourceAgent):
@@ -199,86 +199,3 @@ class LookingGlassAgent(DataSourceAgent):
         while True:
             self.update()
             time.sleep(self.refresh_interval)
-
-import alto.server.django_server.django_server.settings as conf_settings
-from alto.server.components.db import data_broker_manager, ForwardingDB, EndpointDB
-
-for ns, ns_config in conf_settings.DB_CONFIG.items():
-    for db_type, db_config in ns_config.items():
-        if db_type == 'forwarding':
-            db = ForwardingDB(namespace=ns, **db_config)
-        elif db_type == 'endpoint':
-            db = EndpointDB(namespace=ns, **db_config)
-        else:
-            db = None
-        if db:
-            data_broker_manager.register(ns, db_type, db)
-
-if __name__ == '__main__':
-    import argparse
-    import json
-
-    logging.basicConfig(level=logging.INFO)
-
-    parser = argparse.ArgumentParser(description='LHCONE LookingGlass Agent')
-    subparsers = parser.add_subparsers(title='actions', dest='action')
-
-    start_parser = subparsers.add_parser('start')
-    stop_parser = subparsers.add_parser('stop')
-
-    start_parser.add_argument('-c', '--config', dest='config',
-                              help='path to the config file')
-    start_parser.add_argument('-H', '--host', dest='host',
-                              default=None,
-                              help='host name of the data store')
-    start_parser.add_argument('-p', '--port', dest='port', action='store_const',
-                              default=None, const=int,
-                              help='port of the data store')
-    start_parser.add_argument('-n', '--namespace', dest='namespace',
-                              default=None,
-                              help='namespace of the agent')
-    start_parser.add_argument('-d', '--daemonize', dest='daemonized',
-                              action='store_true',
-                              default=False,
-                              help='daemonize the agent')
-    parser.add_argument('--pid', dest='pid_dir', default=None,
-                        help='specify the PID path to be used')
-
-    parser.add_argument('agent_name', metavar='N')
-
-    args = parser.parse_args()
-
-    pid_dir = '/var/log/openalto/'
-    pid_dir = args.pid_dir if args.pid_dir is not None else pid_dir
-
-    if args.action == 'start':
-        with open(args.config, 'r') as f:
-            cfg = json.load(f)
-
-        host = cfg.pop('host', 'localhost')
-        if args.host is not None:
-            host = args.host
-
-        port = int(cfg.pop('port', 6793))
-        if args.port is not None:
-            port = int(args.port)
-
-        namespace = cfg.pop('namespace', 'default')
-        if args.namespace is not None:
-            namespace = args.namespace
-
-        dbinfo = DBInfo(host, port)
-        logging.info('Initializing CERN LookingGlass Agent...')
-        agent = LookingGlassAgent(dbinfo, args.agent_name, namespace, **cfg)
-        logging.info('Starting CERN LookingGlass Agent...')
-        service = AgentService(args.agent_name, pid_dir, agent)
-
-        if args.daemonized:
-            service.start()
-        else:
-            agent.run()
-    else:
-        logging.info('Stopping CERN LookingGlass Agent...')
-        service = AgentService(args.agent_name, pid_dir)
-
-        service.stop()

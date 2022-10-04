@@ -2,7 +2,6 @@ import re
 import ipaddress
 import requests
 import json
-from service import Service
 
 from lxml import html
 from pytricia import PyTricia
@@ -28,7 +27,7 @@ class DataSourceAgent:
     the data store, and a namespace.
     """
 
-    def __init__(self, dbinfo, agent_name, namespace):
+    def __init__(self, dbinfo, agent_name, namespace, **cfg):
         self.dbinfo = dbinfo
         self.agent_name = agent_name
         self.namespace = namespace
@@ -45,41 +44,3 @@ class DataSourceAgent:
 
     def run(self):
         raise NotImplementedError()
-
-class CRICAgent(DataSourceAgent):
-
-    def __init__(self, uri, namespace='default', local_asn=None,
-                 refresh_interval=None, proxies=None, **kwargs):
-        super().__init__(namespace, db_types=['endpoint'])
-        self.uri = uri
-        self.netroute_map = dict()
-        self.local_asn = local_asn
-
-    def update(self):
-        eb_trans = self.db[0].new_transaction()
-        cric_dict = dict()
-        if self.uri.startswith('http'):
-            data = requests.get(self.uri, verify=False)
-            cric_dict = json.loads(data.content)
-        else:
-            with open(self.uri, 'r') as f_cric:
-                cric_dict = json.load(f_cric)
-
-        for rcsite_name, rcsite_obj in cric_dict.items():
-            netroutes = rcsite_obj.get('netroutes', dict())
-            for _, netroute in netroutes.items():
-                for _, ipprefixes in netroute['networks'].items():
-                    for ipprefix in ipprefixes:
-                        asn = netroute.get('asn')
-                        if asn == self.local_asn:
-                            eb_trans.add_property(ipprefix, {'is_local': True})
-        eb_trans.commit()
-
-class AgentService(Service):
-
-    def __init__(self, agent_name, pid_dir, agent_instance=None):
-        super().__init__(agent_name, pid_dir)
-        self.agent = agent_instance
-
-    def run(self):
-        self.agent.run()
