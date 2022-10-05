@@ -1,0 +1,7 @@
+{
+    "namespace": "default",
+    "agent_class": "alto.agent.cric.CRICAgent",
+    "uri": "https://wlcg-cric.cern.ch/api/core/rcsite/query/?json",
+    "local_asn": 513,
+    "refresh_interval": 300
+}

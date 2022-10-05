@@ -5,9 +5,29 @@ from rest_framework.views import APIView
 from .render import MultiPartRelatedRender, AltoParser
 from .utils import get_content
 
-from alto.server.path_vector.service import PathVectorService
+from alto.server.components.frontend import PathVectorService
 
-pv = PathVectorService(conf_settings.MININET_URL, conf_settings.OPENDAYLIGHT_CREDENTIALS)
+
+def setup_debug_db():
+    import alto.server.django_server.django_server.settings as conf_settings
+    from alto.server.components.db import data_broker_manager, ForwardingDB, EndpointDB
+
+    for ns, ns_config in conf_settings.DB_CONFIG.items():
+        for db_type, db_config in ns_config.items():
+            if db_type == 'forwarding':
+                db = ForwardingDB(namespace=ns, **db_config)
+            elif db_type == 'endpoint':
+                db = EndpointDB(namespace=ns, **db_config)
+            else:
+                db = None
+            if db:
+                data_broker_manager.register(ns, db_type, db)
+
+
+if conf_settings.DEBUG:
+    setup_debug_db()
+
+pv = PathVectorService(conf_settings.DEFAULT_NAMESPACE)
 
 class AltoView(APIView):
     renderer_classes = [MultiPartRelatedRender]

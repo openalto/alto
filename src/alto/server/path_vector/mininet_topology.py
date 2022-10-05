@@ -2,7 +2,6 @@ from pprint import pprint
 from .ofrule import Switch
 import requests
 import networkx
-import matplotlib.pyplot as plt
 
 META_LINK_FIELDS = ['src', 'dst', 'type']
 LINK_ATTRIBUTES = { 'bw': 'bandwidth', 'latency': 'latency' }
@@ -68,6 +67,7 @@ class MininetTopology:
         return None
 
     def draw(self):
+        import matplotlib.pyplot as plt
         plt.plot()
         networkx.draw(self.graph, with_labels=True, font_weight='bold')
         plt.show()

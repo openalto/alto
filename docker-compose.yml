@@ -1,0 +1,42 @@
+services:
+  gateway:
+    image: nginx
+    volumes:
+      - ./etc/nginx.conf:/etc/nginx/nginx.conf
+      - ./etc/htpasswd:/etc/nginx/conf.d/.htpasswd
+      - ./etc/cert.pem:/etc/nginx/cert.pem
+      - ./etc/cert.key:/etc/nginx/cert.key
+    ports:
+      - "8443:443"
+  alto-frontend:
+    image: openalto/alto
+    volumes:
+      - ./src/alto:/usr/local/lib/python3.10/site-packages/alto
+    entrypoint: gunicorn
+    command: ["-b", "0.0.0.0:8000", "--reload", "alto.server.django_server.django_server.wsgi", "--preload"]
+  alto-lg-agent:
+    image: openalto/alto
+    volumes:
+      - ./etc/lg-agent.json:/etc/lg-agent.json
+    entrypoint: python
+    command: ["-m", "alto.agent.manage", "--pid", "/tmp", "start", "-c", "/etc/lg-agent.json", "-D", "cernlg"]
+    network_mode: "service:alto-frontend"
+  alto-cric-agent:
+    image: openalto/alto
+    volumes:
+      - ./etc/cric-agent.json:/etc/cric-agent.json
+    entrypoint: python
+    command: ["-m", "alto.agent.manage", "--pid", "/tmp", "start", "-c", "/etc/cric-agent.json", "-D", "cric"]
+    network_mode: "service:alto-frontend"
+  alto-db:
+    image: redis
+    network_mode: "service:alto-frontend"
+  alto-client:
+    image: curlimages/curl
+    volumes:
+      - ./tmp/request.json:/request.json
+      - ./tmp/pvtest.sh:/pvtest.sh
+      - ./etc/cert.pem:/etc/cert.pem
+      - ./etc/cert.key:/etc/cert.key
+    entrypoint: sh
+    command: ["-c", "tail -f /dev/null"]
