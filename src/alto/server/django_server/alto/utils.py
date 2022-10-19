@@ -51,7 +51,7 @@ def get_content(pv, post_data, service_name, host_name):
     vtag = { 'resource-id': ecs_rid, 'tag': tag }
     data = {}
     data['meta'] = { 'vtag': vtag, 'cost-type': cost_type }
-    data['endponit-cost-map'] = paths
+    data['endpoint-cost-map'] = paths
     ecs_part['data'] = data
 
     # prepare the property map part
