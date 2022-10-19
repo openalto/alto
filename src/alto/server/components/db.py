@@ -1,6 +1,7 @@
 import hashlib
 import json
 import uuid
+import ipaddress
 
 from pytricia import PyTricia
 
@@ -173,16 +174,39 @@ class Match(object):
     Class of the packet match.
     """
 
-    def __init__(self, dst_prefix, in_port=None, **pktattr):
+    def __init__(self, dst_prefix, in_port=None, src_prefix=None, **pktattr):
         self.dst_prefix = dst_prefix
         self.in_port = in_port
+        self.src_prefix = src_prefix
         self.optional_attr = pktattr
+
+    def match(self, **flow_info):
+        dst_ip = flow_info.get('dst_ip')
+        if dst_ip:
+            dst_ip = ipaddress.ip_network(dst_ip)
+            if not ipaddress.ip_network(self.dst_prefix).supernet_of(dst_ip):
+                return False
+        in_port = flow_info.get('in_port')
+        if in_port and self.in_port and in_port != self.in_port:
+            return False
+        src_ip = flow_info.get('src_ip')
+        if self.src_prefix and src_ip:
+            src_ip = ipaddress.ip_network(src_ip)
+            if not ipaddress.ip_network(self.src_prefix).supernet_of(src_ip):
+                return False
+        for attr in self.optional_attr:
+            if attr in flow_info:
+                if self.optional_attr[attr] != flow_info[attr]:
+                    return False
+        return True
 
     def to_dict(self):
         m = dict()
         m['dst_prefix'] = self.dst_prefix
         if self.in_port:
             m['in_port'] = self.in_port
+        if self.src_prefix:
+            m['src_prefix'] = self.src_prefix
         for k, v in self.optional_attr:
             m[k] = v
         return m
