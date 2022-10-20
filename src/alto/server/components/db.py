@@ -207,7 +207,7 @@ class Match(object):
             m['in_port'] = self.in_port
         if self.src_prefix:
             m['src_prefix'] = self.src_prefix
-        for k, v in self.optional_attr:
+        for k, v in self.optional_attr.items():
             m[k] = v
         return m
 
