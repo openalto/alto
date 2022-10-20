@@ -73,10 +73,11 @@ class MultiPart:
 class ALTOPathVector(ALTOEndpointCost):
 
     def __init__(self, url, **kwargs):
-        ALTOEndpointCost.__init__(self, url, 'array', 'ane-path', **kwargs)
         self.ctype = ALTO_CTYPE_PV
         self.boundary = ''
         self.charset = None
+        self.prop_names = kwargs.pop('prop_names', ['next_hop', 'as_path'])
+        ALTOEndpointCost.__init__(self, url, 'array', 'ane-path', **kwargs)
 
     def check_headers(self, r):
         self.boundary = ''
@@ -140,4 +141,31 @@ class ALTOPathVector(ALTOEndpointCost):
             if ane.startswith('.ane:'):
                 ane_props[ane[5:]] = self.anepm_[ane]
         return ane_paths, ane_props
+
+    def get_endpoint_costs(self, sips: List[str], dips: List[str], reverse=True):
+        if reverse:
+            ane_paths, ane_props = self.get_costs(dips, sips, prop_names=self.prop_names)
+        else:
+            ane_paths, ane_props = self.get_costs(sips, dips, prop_names=self.prop_names)
+        costs = dict()
+        for s in ane_paths:
+            for d in ane_paths[s]:
+                path = ane_paths[s][d]
+                c = 0
+                for ane in path:
+                    prop = ane_props.get(ane, dict())
+                    if 'next_hop' in prop:
+                        c += 1
+                    if 'as_path' in prop:
+                        as_path = prop['as_path'].split(' ')
+                        c += len(as_path)
+                if reverse:
+                    if d not in costs:
+                        costs[d] = dict()
+                    costs[d][s] = c
+                else:
+                    if s not in costs:
+                        costs[s] = dict()
+                    costs[s][d] = c
+        return costs
 

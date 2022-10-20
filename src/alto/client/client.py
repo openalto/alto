@@ -50,6 +50,18 @@ class Client:
         if config:
             self.config = Config()
 
+    def get_resource(self, url=None, resource_type='cost-map', **kwargs):
+        """
+        """
+        if resource_type == 'cost-map':
+            return self.get_cost_map(url=url, **kwargs)
+        elif resource_type == 'endpoint-cost':
+            return self.get_endpoint_cost(url=url, **kwargs)
+        elif resource_type == 'path-vector':
+            return self.get_path_vector(url=url, **kwargs)
+        else:
+            return None
+
     def get_network_map(self, url=None, **kwargs):
         """
         Low-level API: get raw network map object.
@@ -90,7 +102,8 @@ class Client:
         auth = self.config.get_server_auth()
         if self.auth:
             auth = self.auth
-        return ALTOCostMap(url, auth=auth, **kwargs)
+        nm = self.get_network_map(url=kwargs.pop('dependent_network_map', None))
+        return ALTOCostMap(url, auth=auth, dependent_network_map=nm, **kwargs)
 
     def get_path_vector(self, url, **kwargs):
         """
@@ -123,6 +136,39 @@ class Client:
         """
         # TODO: query the default ird configured for this client.
         raise NotImplementedError
+
+    def get_multiple_costs(self, src_ips: List[str], dst_ips: List[str],
+                           metrics=[], where=None):
+        """
+        Return multiple ALTO costs between `src_ips` and `dst_ips`
+
+        Parameters
+        ----------
+        src_ips : list[str]
+            List of source IP addresses
+        dst_ips : list[str]
+            List of destination IP addresses
+        metrics : list[str]
+            A list of metrics defined in the configuration file
+        where : list[str]
+            A list of constraints to filter (src_ip, dst_ip) pairs
+        """
+        costs = dict()
+        mcosts = dict()
+        for metric in metrics:
+            resource_spec = self.config.get_resource_spec_by_metric(metric)
+            if not resource_spec:
+                continue
+            cm = self.get_resource(**resource_spec)
+            if not cm:
+                continue
+            mcosts[metric] = cm.get_endpoint_costs(src_ips, dst_ips)
+        for s in src_ips:
+            costs[s] = dict()
+            for d in dst_ips:
+                costs[s][d] = {m: mcosts[m][s][d] for m in metrics}
+        # TODO: use `where` to filter costs
+        return costs
 
     def get_routing_costs(self, src_ips: List[str], dst_ips: List[str],
                           cost_map=None, cost_type=None,

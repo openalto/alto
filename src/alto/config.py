@@ -108,3 +108,8 @@ class Config:
         static_ird = json.loads(self.parser.get('client', 'static_ird').strip())
         return static_ird.get(resource_id)
 
+    def get_resource_spec_by_metric(self, metric):
+        self.parser.read(self.location)
+        metric_resources = json.loads(self.parser.get('client', 'metrics').strip())
+        return metric_resources.get(metric)
+

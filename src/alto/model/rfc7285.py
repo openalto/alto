@@ -114,7 +114,7 @@ class InformationResourceDirectory(object):
 
 class ALTOBaseResource:
 
-    def __init__(self, ctype, url, auth=None, incre_mode=None, verify=True):
+    def __init__(self, ctype, url, auth=None, incre_mode=None, verify=True, **kwargs):
         self.ctype = ctype
         self.url = url
         self.auth = auth
@@ -183,6 +183,7 @@ class ALTOCostMap(ALTOBaseResource):
 
         r = self.get()
         self.__build_costmap(r.json())
+        self.nm = kwargs.get('dependent_network_map')
 
     def check_headers(self, r):
         assert r.headers['content-type'] == ALTO_CTYPE_CM
@@ -205,6 +206,20 @@ class ALTOCostMap(ALTOBaseResource):
                 continue
             result.update({s: {d: self.cmap_[s][d] for d in set(dpid) if d in self.cmap_[s]}})
         return result
+
+    def get_endpoint_costs(self, src_ips: List[str], dst_ips: List[str]):
+        spids = self.nm.get_pid(src_ips)
+        spidmap = dict(zip(src_ips, spids))
+        dpids = self.nm.get_pid(dst_ips)
+        dpidmap = dict(zip(dst_ips, dpids))
+
+        costs = self.get_costs(spids, dpids)
+        return {
+            sip: {
+                dip: costs[spidmap[sip]][dpidmap[dip]]
+                for dip in dst_ips
+            } for sip in src_ips
+        }
 
 
 class ALTOEndpointCost(ALTOBaseResource):
