@@ -113,7 +113,10 @@ if __name__ == '__main__':
         if args.daemonized:
             service.start()
         else:
-            agent.run()
+            try:
+                agent.run()
+            except KeyboardInterrupt:
+                pass
     else:
         logging.info('Stopping %s Agent...' % (args.agent_name))
         service = AgentService(args.agent_name, pid_dir)

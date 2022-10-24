@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 from .render import MultiPartRelatedRender, AltoParser
 from .utils import get_content
 
-from alto.server.components.frontend import PathVectorService
+from alto.server.components.backend import PathVectorService
 
 
 def setup_debug_db():
