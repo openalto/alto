@@ -23,7 +23,7 @@ class ECRule:
     def __init__(self, **rule):
         self.dst_prefix_pattern = rule.pop('dst_prefix', None)
         self.in_port = rule.pop('in_port', None)
-        self.src_prefix_pattern = rule.get('src_prefix', None)
+        self.src_prefix_pattern = rule.pop('src_prefix', None)
         self.optional_attr = rule
 
     def gen(self, **flow_info):
@@ -140,7 +140,29 @@ class G2Agent(DataSourceAgent):
         -------
         routes : list
             A list of (dpid: str, fwd_rule: ForwardingRule) pairs.
+        props : dict
+            A mapping from switch IP to properties.
         """
+        props = dict()
+        nodes = dict()
+        for node in snapshot.get('topo', {}).get('topology', {}).get('nodes', []):
+            node_info = node['info']
+            if type(node_info) is str:
+                node_info = eval(node_info)
+            if node_info is None:
+                continue
+            node_ip = node_info.get('ipaddress')
+            if node_ip:
+                node_name = node['name']
+                node_asn = node_info.get('as', {}).get('number')
+                if node_ip not in props:
+                    props[node_ip] = dict()
+                props[node_ip]['dpid'] = node_name
+                if node_asn:
+                    props[node_ip]['asn'] = node_asn
+            node.update(node_info)
+            nodes[node['id']] = node
+
         routes = []
         flows = snapshot.get('flows', {}).get('flowgroups', [])
         links = dict()
@@ -152,23 +174,43 @@ class G2Agent(DataSourceAgent):
                 continue
             link.update(link_info)
             links[link['id']] = link
+
+            dpid = link_info.get('dst_sw')
+            dst_ip = link_info.get('dst_swip')
+            if dst_ip not in props:
+                props[dst_ip] = dict()
+            if 'dpid' not in props[dst_ip]:
+                props[dst_ip]['dpid'] = dpid
+            if 'incoming_links' not in props[dst_ip]:
+                props[dst_ip]['incoming_links'] = dict()
+            props[dst_ip]['incoming_links'][link['id']] = link
+
         for f in flows:
             flow_info = f['info']
             if type(flow_info) is str:
                 flow_info = eval(flow_info)
+            if flow_info is None:
+                continue
             pkt_match = self._get_ec(**flow_info)
+            src_prefix = pkt_match.src_prefix or flow_info.get('src_ip')
+
             flow_links = f['links']
             for l in flow_links:
+                if l['source'] == f['start']:
+                    if src_prefix not in props:
+                        props[src_prefix] = dict()
+                    props[src_prefix]['dpid'] = nodes[l['target']]['name']
+                    props[src_prefix]['is_local'] = True
                 if l['id'] in links:
                     linfo = links[l['id']]
                     dpid = linfo.get('src_sw')
                     next_hop = linfo.get('dst_swip')
                     if dpid is None:
                         continue
-                    action = Action(next_hop)
+                    action = Action(next_hop, outgoing_link=l['id'])
                     fwd_rule = ForwardingRule(pkt_match, action)
                     routes.append((dpid, fwd_rule))
-        return routes
+        return routes, props
 
     def update(self):
         logging.info('Polling latest snapshot from G2...')
@@ -178,14 +220,22 @@ class G2Agent(DataSourceAgent):
             return
         self.latest_ts = ts
 
+        routes, props = self._parse_routes(snapshot)
+
         fib_trans = self.db[0].new_transaction()
-        routes = self._parse_routes(snapshot)
         logging.info('Writing routes to backend db...')
         for route in routes:
             dpid = route[0]
             rule = route[1]
             fib_trans.add_rule(dpid, rule)
         fib_trans.commit()
+
+        eb_trans = self.db[1].new_transaction()
+        logging.info('Writing topology properties to backend db...')
+        for swip, sw_props in props.items():
+            eb_trans.add_property(swip, sw_props)
+        eb_trans.commit()
+
         logging.info('Backend db is updated')
 
     def run(self):
