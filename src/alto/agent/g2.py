@@ -57,6 +57,9 @@ class G2Agent(DataSourceAgent):
         self.token = None
         self.ec_rule_location = cfg.get('ec_rule')
         self.ec_rules = []
+        self.local_prefixes = cfg.get('local_prefixes', ['0.0.0.0/0'])
+        self.max_retry = cfg.get('max_retry', 3)
+
         self.snapshot = dict()
         self.latest_ts = -1
 
@@ -214,12 +217,16 @@ class G2Agent(DataSourceAgent):
 
     def update(self):
         logging.info('Polling latest snapshot from G2...')
-        ts, snapshot = self._do_query()
+        ts, snapshot = self._do_query(retry=self.max_retry)
         if ts <= self.latest_ts:
             logging.info('No updated snapshot')
             return
         self.latest_ts = ts
 
+        logging.info('Loading EC rules...')
+        self._load_ec_rule()
+
+        logging.info('Parsing routes and properties from latest snapshot...')
         routes, props = self._parse_routes(snapshot)
 
         fib_trans = self.db[0].new_transaction()
@@ -229,6 +236,11 @@ class G2Agent(DataSourceAgent):
             rule = route[1]
             fib_trans.add_rule(dpid, rule)
         fib_trans.commit()
+
+        for p in self.local_prefixes:
+            if p not in props:
+                props[p] = dict()
+            props[p]['is_local'] = True
 
         eb_trans = self.db[1].new_transaction()
         logging.info('Writing topology properties to backend db...')
