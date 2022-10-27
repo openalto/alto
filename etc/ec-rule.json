@@ -1,0 +1,23 @@
+[
+    {
+        "src_prefix": "1.1.1.0/30",
+        "dst_prefix": "8.8.8.0/30"
+    },
+    {
+        "src_prefix": "1.1.1.0/30",
+        "dst_prefix": "8.8.8.64/30",
+        "dst_port": "80"
+    },
+    {
+        "src_prefix": "1.1.1.64/30",
+        "dst_prefix": "8.8.8.64/30",
+        "dst_ns": "rook-central"
+    },
+    {
+        "src_prefix": "{}/30",
+        "dst_prefix": "8.8.8.128/30"
+    },
+    {
+        "dst_prefix": "{}/24"
+    }
+]

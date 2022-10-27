@@ -1,0 +1,9 @@
+{
+    "namespace": "default",
+    "agent_class": "alto.agent.g2.G2Agent",
+    "base_uri": "https://g2.nrp-nautilus.io/api/",
+    "username": "admin",
+    "password": "admin",
+    "ec_rule": "/etc/ec-rule.json",
+    "refresh_interval": 300
+}

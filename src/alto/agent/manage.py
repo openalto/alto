@@ -104,6 +104,8 @@ if __name__ == '__main__':
         logging.info('Initializing %s Agent...' % (args.agent_name))
 
         if args.debug:
+            logger = logging.getLogger()
+            logger.setLevel(logging.DEBUG)
             setup_debug_db()
 
         agent = cls(dbinfo, args.agent_name, namespace, **cfg)
