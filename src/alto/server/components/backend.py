@@ -42,7 +42,8 @@ class PathVectorService:
         if outgoing_link:
             ane_name = outgoing_link
             if ane_name not in property_map:
-                incoming_links = self.eb.lookup(nh, property_names=['incoming_links'])
+                nh_props = self.eb.lookup(nh, property_names=['incoming_links'])
+                incoming_links = nh_props.get('incoming_links', dict())
                 property_map[ane_name] = incoming_links.get(ane_name, dict())
         else:
             nh_ane = (dpid, nh)
@@ -113,4 +114,9 @@ class PathVectorService:
                 ane_path.append(as_path_ane)
 
             paths[src][dst] = ane_path
+
+        property_map = {ane: {pname: pval
+                              for pname, pval in props.items() if pname in property_names}
+                        for ane, props in property_map.items()}
+
         return paths, property_map
