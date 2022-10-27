@@ -1,5 +1,6 @@
 import codecs
 import json
+import hashlib
 
 from django.conf import settings
 from django.utils.encoding import force_bytes
@@ -24,7 +25,8 @@ class MultiPartRelatedRender(MultiPartRenderer):
     type = ALTO_CONTENT_TYPE_ECS
     format = 'multipart'
     charset = 'utf-8'
-    BOUNDARY = settings.BOUNDARY_STRING
+    # FIXME: `_boundary` shouldn't be fixed. Compute boundary by hash check of content at runtime
+    BOUNDARY = hashlib.md5().hexdigest()
 
     def __init__(self):
         super(MultiPartRelatedRender, self).__init__()

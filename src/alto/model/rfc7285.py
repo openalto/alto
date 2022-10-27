@@ -27,12 +27,16 @@
 
 
 from dataclasses import dataclass
-from typing import List, Dict
+from typing import List, Dict, Any
+import json
+import ipaddress
 import requests
 import pytricia
 
 ALTO_CTYPE_NM = 'application/alto-networkmap+json'
 ALTO_CTYPE_CM = 'application/alto-costmap+json'
+ALTO_CTYPE_ECS = 'application/alto-endpointcost+json'
+ALTO_CTYPE_ECS_PARAMS = 'application/alto-endpointcostparams+json'
 ALTO_CTYPE_ERROR = 'application/alto-error+json'
 
 
@@ -110,11 +114,12 @@ class InformationResourceDirectory(object):
 
 class ALTOBaseResource:
 
-    def __init__(self, ctype, url, auth=None, incre_mode=None):
+    def __init__(self, ctype, url, auth=None, incre_mode=None, verify=True, **kwargs):
         self.ctype = ctype
         self.url = url
         self.auth = auth
         self.incre_mode = incre_mode
+        self.verify = verify
 
     def get(self):
         headers = {
@@ -178,6 +183,7 @@ class ALTOCostMap(ALTOBaseResource):
 
         r = self.get()
         self.__build_costmap(r.json())
+        self.nm = kwargs.get('dependent_network_map')
 
     def check_headers(self, r):
         assert r.headers['content-type'] == ALTO_CTYPE_CM
@@ -201,3 +207,77 @@ class ALTOCostMap(ALTOBaseResource):
             result.update({s: {d: self.cmap_[s][d] for d in set(dpid) if d in self.cmap_[s]}})
         return result
 
+    def get_endpoint_costs(self, src_ips: List[str], dst_ips: List[str]):
+        spids = self.nm.get_pid(src_ips)
+        spidmap = dict(zip(src_ips, spids))
+        dpids = self.nm.get_pid(dst_ips)
+        dpidmap = dict(zip(dst_ips, dpids))
+
+        costs = self.get_costs(spids, dpids)
+        return {
+            sip: {
+                dip: costs[spidmap[sip]][dpidmap[dip]]
+                for dip in dst_ips
+            } for sip in src_ips
+        }
+
+
+class ALTOEndpointCost(ALTOBaseResource):
+    vtag: Vtag
+
+    def __init__(self, url, cost_mode, cost_metric, **kwargs):
+        self.cost_mode = cost_mode
+        self.cost_metric = cost_metric
+        ALTOBaseResource.__init__(self, ALTO_CTYPE_ECS, url, **kwargs)
+
+    def check_headers(self, r):
+        assert r.headers['content-type'] == ALTO_CTYPE_ECS
+
+    def check_contents(self, r):
+        pass
+
+    def from_payload(self, payload):
+        data = json.loads(payload)
+        self._build_endpointcost(data)
+
+    def post(self, data):
+        headers = {
+            'content-type': ALTO_CTYPE_ECS_PARAMS,
+            'accepts': self.ctype + ',' + ALTO_CTYPE_ERROR
+        }
+        r = requests.post(self.url, json=data, auth=self.auth, headers=headers, verify=self.verify)
+        r.raise_for_status()
+
+        self.check_headers(r)
+        self.check_contents(r)
+
+        return r
+
+    def _build_endpointcost(self, data):
+        self.vtag_ = Vtag.from_json(data['meta'].get('vtag', {}))
+        self.ecmap_ = data['endpoint-cost-map']
+
+    def __build_query(self, sips, dips):
+        data = dict()
+        data['cost-type'] = dict()
+        data['cost-type']['cost-mode'] = self.cost_mode
+        data['cost-type']['cost-metric'] = self.cost_metric
+        data['endpoints'] = dict()
+        data['endpoints']['srcs'] = sips
+        data['endpoints']['dsts'] = dips
+        return data
+
+    def get_costs(self, sips: List[str],
+                  dips: List[str]) -> Dict[str, Dict[str, Any]]:
+        sips = ['ipv{}:{}'.format(ipaddress.ip_address(s).version, s) for s in sips]
+        dips = ['ipv{}:{}'.format(ipaddress.ip_address(d).version, d) for d in dips]
+        data = self.__build_query(sips, dips)
+        r = self.post(data)
+        self.from_payload(r.content)
+
+        result = {}
+        for s in set(sips):
+            if s not in self.ecmap_:
+                continue
+            result.update({s: {d: self.ecmap_[s][d] for d in set(dips) if d in self.ecmap_[s]}})
+        return result
