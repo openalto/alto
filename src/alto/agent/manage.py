@@ -1,5 +1,6 @@
 import importlib
 import logging
+import time
 from service import Service
 
 from alto.server.components.datasource import DBInfo
@@ -12,7 +13,13 @@ class AgentService(Service):
         self.agent = agent_instance
 
     def run(self):
-        self.agent.run()
+        while True:
+            try:
+                self.agent.run()
+            except Exception as e:
+                logging.info('Agent service stopped by an exception: {}'.format(e))
+                logging.info('Restarting the agent service after 10 sec...')
+                time.sleep(10)
 
 def setup_debug_db():
     import alto.server.django_server.django_server.settings as conf_settings
