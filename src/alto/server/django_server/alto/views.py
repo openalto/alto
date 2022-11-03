@@ -10,7 +10,7 @@ from alto.server.components.backend import PathVectorService
 
 def setup_debug_db():
     import alto.server.django_server.django_server.settings as conf_settings
-    from alto.server.components.db import data_broker_manager, ForwardingDB, EndpointDB
+    from alto.server.components.db import data_broker_manager, ForwardingDB, EndpointDB, DelegateDB
 
     for ns, ns_config in conf_settings.DB_CONFIG.items():
         for db_type, db_config in ns_config.items():
@@ -18,6 +18,8 @@ def setup_debug_db():
                 db = ForwardingDB(namespace=ns, **db_config)
             elif db_type == 'endpoint':
                 db = EndpointDB(namespace=ns, **db_config)
+            elif db_type == 'delegate':
+                db = DelegateDB(namespace=ns, **db_config)
             else:
                 db = None
             if db:
