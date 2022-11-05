@@ -7,6 +7,7 @@ import ipaddress
 from pytricia import PyTricia
 
 from alto.common.error import NotSupportedError
+from alto.utils import load_class
 
 
 class DataBrokerManager(object):
@@ -162,7 +163,7 @@ class DataBroker:
 
     def _parse_key(self, key):
         componets = key.split(b':')
-        return b':'.join(componets[2:-1]), b':'.join(componets[1:])
+        return componets[2], b':'.join(componets[1:])
 
     def build_cache(self):
         """
@@ -531,6 +532,8 @@ class DelegateDB(DataBroker):
             raise NotSupportedError()
         for key in keys:
             data_source_name, _ = self._parse_key(key)
+            if type(data_source_name) is bytes:
+                data_source_name = data_source_name.decode()
             data_source_json = self._backend.get(key)
             data_source_config = json.loads(data_source_json)
 
@@ -556,12 +559,12 @@ class DelegateDB(DataBroker):
         data : Any
             Response of the data source query.
         """
+        # data_source_config_json = self._lookup('{}:{}'.format(self.type, data_source_name))
+        # data_source_config = json.loads(data_source_config_json)
         data_source_config = self._base.get(data_source_name)
         data_source_cls = data_source_config.pop('data_source_cls')
         try:
-            pkg_name, cls_name = data_source_cls.rsplit('.', 1)
-            pkg = importlib.import_module(pkg_name)
-            cls = pkg.__getattribute__(cls_name)
+            cls = load_class(data_source_cls)
         except Exception as e:
             print(e)
             return

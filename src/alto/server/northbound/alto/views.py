@@ -2,17 +2,20 @@ from django.conf import settings as conf_settings
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .render import MultiPartRelatedRender, AltoParser
+from .render import MultiPartRelatedRender, EntityPropRender, EndpointCostParser, EntityPropParser
 from .utils import get_content
 
 from alto.server.components.backend import PathVectorService
+from alto.config import Config
+from alto.utils import load_class
+
+
+config = Config()
 
 
 def setup_debug_db():
-    from alto.config import Config
     from alto.server.components.db import data_broker_manager, ForwardingDB, EndpointDB, DelegateDB
 
-    config = Config()
     for ns, ns_config in config.get_db_config().items():
         for db_type, db_config in ns_config.items():
             if db_type == 'forwarding':
@@ -30,24 +33,66 @@ def setup_debug_db():
 if conf_settings.DEBUG:
     setup_debug_db()
 
-pv = PathVectorService(conf_settings.DEFAULT_NAMESPACE)
 
-class AltoView(APIView):
+class IRDView(APIView):
+    """
+    ALTO view for information resource directory (IRD).
+    """
+
+    algorithm = None
+    resource_id = ''
+    content_type = 'application/alto-directory+json'
+
+    def get(self):
+        pass
+
+
+class EntityPropertyView(APIView):
+    """
+    ALTO view for entity property map.
+    """
+    renderer_classes = [EntityPropRender]
+    parser_classes = [EntityPropParser]
+
+    algorithm = None
+    resource_id = ''
+    content_type = 'application/alto-endpointprop+json'
+
+    def post(self, request):
+        entities = request.data['entities']
+        content = self.algorithm.lookup(entities)
+        return Response(content, content_type=self.content_type)
+
+
+class PathVectorView(APIView):
+    """
+    ALTO view for ECS with path vector extension.
+    """
     renderer_classes = [MultiPartRelatedRender]
-    parser_classes = [AltoParser]
+    parser_classes = [EndpointCostParser]
 
-    def get(self, request, path_vector):
-        print('get')
-        print(request.headers)
-        return Response({
+    algorithm = PathVectorService(config.get_default_namespace())
+    resource_id = ''
 
-        })
-
-    def post(self, request, path_vector):
+    def post(self, request):
         post_data = dict(request.data)
         content_type = self.renderer_classes[0]().get_context_type()
         host_name = request.get_host()
 
-        service_name = path_vector
-        content = get_content(pv, post_data, service_name, host_name)
+        content = get_content(algorithm, post_data, resource_id, host_name)
         return Response(content, content_type=content_type)
+
+
+def get_view(resource_type, resource_id, namespace, algorithm=None, params=dict()):
+    if resource_type == 'path-vector':
+        view_cls =  PathVectorView
+    elif resource_type == 'entity-prop':
+        view_cls = EntityPropertyView
+    else:
+        return
+    if algorithm:
+        alg_cls = load_class(algorithm)
+        alg = alg_cls(namespace, **params)
+        return view_cls.as_view(resource_id=resource_id, algorithm=alg)
+    else:
+        return view_cls.as_view(resource_id=resource_id)

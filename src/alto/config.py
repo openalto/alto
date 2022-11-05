@@ -125,3 +125,14 @@ class Config:
         self.parser.read(self.location)
         db_config = json.loads(self.parser.get('server', 'db_config').strip())
         return db_config
+
+
+    def get_configured_resources(self):
+        self.parser.read(self.location)
+        resources = json.loads(self.parser.get('server', 'resources').strip())
+        return resources
+
+
+    def get_default_namespace(self):
+        self.parser.read(self.location)
+        return self.parser.get('server', 'default_namespace') or 'default'

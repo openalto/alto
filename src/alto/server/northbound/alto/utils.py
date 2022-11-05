@@ -12,11 +12,29 @@ ALTO_CONTENT_TYPE_ECS = 'application/alto-endpointcost+json'
 ALTO_CONTENT_TYPE_PROPMAP = 'application/alto-propmap+json'
 PREFIX_INET4 = "ipv4:"
 
+
 def get_content(pv, post_data, service_name, host_name):
     """
-    post_data:
-    service_name: resource id of the service
-    host_name:  ip of server
+    Call path vector algorithm to compute path vectors and properties.
+
+    Parameters
+    ----------
+    pv : class
+        A class provide `lookup()` method for path vector lookup for a given set
+        of `flows` and a given list of `property_names`.
+    post_data: dict
+        The ECS request in dictionary format.
+    service_name : str
+        Resource id.
+    host_name : str
+        Host name of the ALTO server.
+
+    Returns
+    -------
+    ecs_part : dict
+        Dictionary for the `endpoint-cost-map` response.
+    prop_part : dict
+        Dictionary for the `property-map` response.
     """
     print(post_data)
     if 'endpoints' in post_data:
@@ -74,3 +92,4 @@ def get_content(pv, post_data, service_name, host_name):
     prop_part['data'] = data
 
     return [ ecs_part, prop_part ]
+

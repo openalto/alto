@@ -28,5 +28,5 @@ class GeoipAgent:
         geomap = dict()
         for endpoint in endpoints:
             geoinfo = self.client.city(endpoint)
-            geomap[endpoint] = (geoinfo.location.latitude, geoinfo.location.longtitude)
+            geomap[endpoint] = (geoinfo.location.latitude, geoinfo.location.longitude)
         return geomap

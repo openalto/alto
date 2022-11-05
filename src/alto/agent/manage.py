@@ -5,6 +5,7 @@ from service import Service
 
 from alto.server.components.datasource import DBInfo
 from alto.common.logging import fail_with_msg
+from alto.utils import load_class
 
 class AgentService(Service):
 
@@ -91,9 +92,7 @@ if __name__ == '__main__':
             agent_class = args.agent_class
 
         try:
-            pkg_name, cls_name = agent_class.rsplit('.', 1)
-            pkg = importlib.import_module(pkg_name)
-            cls = pkg.__getattribute__(cls_name)
+            cls = load_class(agent_class)
         except Exception as e:
             print(e)
             fail_with_msg(logging.CRITICAL, 'Failed to load class %s' % (agent_class))

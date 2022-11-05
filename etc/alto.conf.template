@@ -68,6 +68,25 @@ db_config = {
     "endpoint": {
       "backend": "local"}}}
 
+default_namespace = default
+
+# Configuration for information resources
+resources = {
+  "pv": {
+    "type": "path-vector",
+    "path": "pathvector",
+    "namespace": "default",
+    "algorithm": "alto.server.components.backend.PathVectorService",
+    "params": {}
+  },
+  "geoip": {
+    "type": "entity-prop",
+    "path": "entityprop",
+    "namespace": "default",
+    "algorithm": "alto.server.components.backend.GeoIPPropertyService",
+    "params": {
+      "data_source": "geoip"}}}
+
 ####################################################
 # Common configuratoin
 ####################################################

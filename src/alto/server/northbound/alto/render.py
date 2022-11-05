@@ -1,20 +1,33 @@
-import codecs
 import json
 import hashlib
 
 from django.conf import settings
 from django.utils.encoding import force_bytes
-from rest_framework.exceptions import ParseError
-from rest_framework.parsers import BaseParser
-from rest_framework.renderers import MultiPartRenderer
-
 from rest_framework.parsers import JSONParser
+from rest_framework.renderers import JSONRenderer, MultiPartRenderer
 
 HEADER_CTYPE = 'Content-Type'
 HEADER_ID = 'Content-ID'
 ALTO_CONTENT_TYPE_ECS = 'application/alto-endpointcost+json'
+ALTO_CONTENT_TYPE_EPS = 'application/alto-endpointprop+json'
 ALTO_CONTENT_TYPE_PROPMAP = 'application/alto-propmap+json'
-ALTO_PARAMETER_TYPE = 'application/alto-endpointcostparams+json'
+ALTO_PARAMETER_TYPE_ECS = 'application/alto-endpointcostparams+json'
+ALTO_PARAMETER_TYPE_EPS = 'application/alto-endpointpropparams+json'
+ALTO_PARAMETER_TYPE_PROPMAP = 'application/alto-propmapparams+json'
+
+
+class EntityPropRender(JSONRenderer):
+    """
+    Render for Entity Property Map.
+    """
+
+    media_type = ALTO_CONTENT_TYPE_PROPMAP
+
+    def render(self, propmap, accepted_media_type=None, renderer_context=None):
+        data = dict()
+        data['property-map'] = propmap
+        return super(EntityPropRender, self).render(data, accepted_media_type,
+                                                renderer_context)
 
 
 class MultiPartRelatedRender(MultiPartRenderer):
@@ -74,5 +87,14 @@ class MultiPartRelatedRender(MultiPartRenderer):
         )
 
 
-class AltoParser(JSONParser):
-    media_type = ALTO_PARAMETER_TYPE
+class EndpointCostParser(JSONParser):
+    media_type = ALTO_PARAMETER_TYPE_ECS
+
+
+class EndpointPropParser(JSONParser):
+    media_type = ALTO_PARAMETER_TYPE_EPS
+
+
+class EntityPropParser(JSONParser):
+    media_type = ALTO_PARAMETER_TYPE_PROPMAP
+
