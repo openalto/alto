@@ -77,7 +77,7 @@ class LookingGlassAgent(DataSourceAgent):
                                     headers={
                                         'Content-Type': 'application/json'
                                     },
-                                    proxies=self.proxies)
+                                    proxies=self.proxies, timeout=5)
                 doctree = data.json()['output'][router]['commandResult']
                 query_result = json.loads(json.dumps(xmltodict.parse(doctree)))
                 for table in query_result["rpc-reply"]["route-information"]["route-table"]:
