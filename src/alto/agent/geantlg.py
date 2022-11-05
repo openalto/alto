@@ -87,7 +87,7 @@ class LookingGlassAgent(DataSourceAgent):
                 logging.warn(f"Error fetching prefix {prefix} on router {router}; skipping")
         return results
 
-    def get_routes(self, ipprefix=None, router=None):
+    def get_routes(self, ipprefix=None, router=None, selected=False):
         """
         Get a route entries.
 
@@ -109,12 +109,15 @@ class LookingGlassAgent(DataSourceAgent):
         results_dict = self._do_query(router=router, args=args)
         logging.info('Parsing routes on %s' % (router))
         routes = self._parse_routes(results_dict)
+        if selected:
+            for p in routes:
+                routes[p] = [r for r in routes[p] if r.get('selected')]
         return routes
 
     def update(self):
         fib_trans = self.db[0].new_transaction()
         for _router in self.listened_routers:
-            routes = self.get_routes(router=_router)
+            routes = self.get_routes(router=_router, selected=True)
             for dst_prefix, route in routes.items():
                 if route:
                     route = route[0]
