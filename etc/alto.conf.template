@@ -81,14 +81,32 @@ db_config = {
       "db": 0}}}
 
 default_namespace = default
+base_uri = http://openalto.org/
+cost_types = {
+  "path-vector": {
+    "cost-mode": "array",
+    "cost-metric": "ane-path"}}
 
 # Configuration for information resources
 resources = {
+  "directory": {
+    "type": "ird",
+    "path": "directory",
+    "namespace": "default",
+    "algorithm": "alto.server.components.backend.IRDService",
+    "params": {
+      "namespaces": []
+    }
+  },
   "pv": {
     "type": "path-vector",
     "path": "pathvector",
     "namespace": "default",
     "algorithm": "alto.server.components.backend.PathVectorService",
+    "capabilities": {
+      "cost-type-names": [ "path-vector" ],
+      "ane-property-names": [ "next-hop", "as-path" ]
+    },
     "params": {}
   },
   "geoip": {
@@ -96,6 +114,12 @@ resources = {
     "path": "entityprop",
     "namespace": "default",
     "algorithm": "alto.server.components.backend.GeoIPPropertyService",
+    "capabilities": {
+      "mappings": {
+        "ipv4": [ "geolocation" ],
+        "ipv6": [ "geolocation" ]
+      }
+    },
     "params": {
       "data_source": "geoip"}}}
 

@@ -6,14 +6,27 @@ from django.utils.encoding import force_bytes
 from rest_framework.parsers import JSONParser
 from rest_framework.renderers import JSONRenderer, MultiPartRenderer
 
+from alto.common.constants import (ALTO_CONTENT_TYPE_IRD,
+                                   ALTO_CONTENT_TYPE_ECS,
+                                   ALTO_CONTENT_TYPE_EPS,
+                                   ALTO_CONTENT_TYPE_PROPMAP,
+                                   ALTO_PARAMETER_TYPE_ECS,
+                                   ALTO_PARAMETER_TYPE_EPS,
+                                   ALTO_PARAMETER_TYPE_PROPMAP)
+
 HEADER_CTYPE = 'Content-Type'
 HEADER_ID = 'Content-ID'
-ALTO_CONTENT_TYPE_ECS = 'application/alto-endpointcost+json'
-ALTO_CONTENT_TYPE_EPS = 'application/alto-endpointprop+json'
-ALTO_CONTENT_TYPE_PROPMAP = 'application/alto-propmap+json'
-ALTO_PARAMETER_TYPE_ECS = 'application/alto-endpointcostparams+json'
-ALTO_PARAMETER_TYPE_EPS = 'application/alto-endpointpropparams+json'
-ALTO_PARAMETER_TYPE_PROPMAP = 'application/alto-propmapparams+json'
+
+
+class IRDRender(JSONRenderer):
+    """
+    Render for Information Resource Directory.
+    """
+
+    media_type = ALTO_CONTENT_TYPE_IRD
+
+    def render(self, data, accepted_media_type=None, renderer_context=None):
+        return super(IRDRender, self).render(data, accepted_media_type, renderer_context)
 
 
 class EntityPropRender(JSONRenderer):
@@ -27,7 +40,7 @@ class EntityPropRender(JSONRenderer):
         data = dict()
         data['property-map'] = propmap
         return super(EntityPropRender, self).render(data, accepted_media_type,
-                                                renderer_context)
+                                                    renderer_context)
 
 
 class MultiPartRelatedRender(MultiPartRenderer):

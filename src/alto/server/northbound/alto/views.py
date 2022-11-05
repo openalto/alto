@@ -2,12 +2,14 @@ from django.conf import settings as conf_settings
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .render import MultiPartRelatedRender, EntityPropRender, EndpointCostParser, EntityPropParser
+from .render import IRDRender, MultiPartRelatedRender, EntityPropRender, EndpointCostParser, EntityPropParser
 from .utils import get_content
 
-from alto.server.components.backend import PathVectorService
+from alto.server.components.backend import PathVectorService, IRDService
 from alto.config import Config
 from alto.utils import load_class
+from alto.common.constants import (ALTO_CONTENT_TYPE_IRD,
+                                   ALTO_CONTENT_TYPE_PROPMAP)
 
 
 config = Config()
@@ -38,13 +40,16 @@ class IRDView(APIView):
     """
     ALTO view for information resource directory (IRD).
     """
+    renderer_classes = [IRDRender]
 
-    algorithm = None
+    algorithm = IRDService('default-ird')
     resource_id = ''
-    content_type = 'application/alto-directory+json'
+    content_type = ALTO_CONTENT_TYPE_IRD
 
-    def get(self):
-        pass
+    def get(self, request):
+        base_uri = request.build_absolute_uri('/')
+        content = self.algorithm.list_resources(self.resource_id, default_base_uri=base_uri)
+        return Response(content, content_type=self.content_type)
 
 
 class EntityPropertyView(APIView):
@@ -56,7 +61,7 @@ class EntityPropertyView(APIView):
 
     algorithm = None
     resource_id = ''
-    content_type = 'application/alto-endpointprop+json'
+    content_type = ALTO_CONTENT_TYPE_PROPMAP
 
     def post(self, request):
         entities = request.data['entities']
@@ -84,8 +89,10 @@ class PathVectorView(APIView):
 
 
 def get_view(resource_type, resource_id, namespace, algorithm=None, params=dict()):
-    if resource_type == 'path-vector':
-        view_cls =  PathVectorView
+    if resource_type == 'ird':
+        view_cls = IRDView
+    elif resource_type == 'path-vector':
+        view_cls = PathVectorView
     elif resource_type == 'entity-prop':
         view_cls = EntityPropertyView
     else:

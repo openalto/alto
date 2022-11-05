@@ -25,6 +25,11 @@
 # - Jensen Zhang <jingxuan.n.zhang@gmail.com>
 # - Kai Gao <emiapwil@gmail.com>
 
+from urllib.parse import urljoin
+
+from alto.config import Config
+from alto.common.constants import ALTO_CONTENT_TYPES, ALTO_PARAMETER_TYPES
+
 from .db import data_broker_manager
 
 
@@ -33,11 +38,48 @@ class IRDService:
     Backend algorithm for IRD generation.
     """
 
-    def __init__(self, namespace, **kwargs):
+    def __init__(self, namespace, namespaces=None, **kwargs):
         self.ns = namespace
+        self.namespaces = namespaces
+        self.config = Config()
 
-    def list_resources(self):
-        pass
+    def list_resources(self, self_resource_id, default_base_uri='https://localhost/'):
+        resources = self.config.get_configured_resources()
+        base_uri = self.config.get_server_base_uri() or default_base_uri
+        directory = dict()
+
+        directory['meta'] = dict()
+        cost_types = self.config.get_server_cost_types()
+        if cost_types:
+            directory['meta']['cost-types'] = cost_types
+
+        directory['resources'] = dict()
+        for rid in resources.keys():
+            if rid == self_resource_id:
+                continue
+            resource_config = resources[rid]
+            if self.namespaces and resource_config['namespace'] not in self.namespaces:
+                continue
+
+            resource_entry = dict()
+            resource_path = resource_config['path']
+            resource_entry['uri'] = urljoin(base_uri, '{}/{}'.format(resource_path, rid))
+            media_type = ALTO_CONTENT_TYPES.get(resource_config['type'])
+            if not media_type:
+                continue
+            resource_entry['media-type'] = media_type
+            accepts = ALTO_PARAMETER_TYPES.get(resource_config['type'])
+            if accepts:
+                resource_entry['accepts'] = accepts
+            capabilities = resource_config.get('capabilities')
+            if capabilities:
+                resource_entry['capabilities'] = capabilities
+            uses = resource_config.get('uses')
+            if uses:
+                resource_entry['uses'] = uses
+
+            directory['resources'][rid] = resource_entry
+        return directory
 
 
 class EndpointPropertyService:
