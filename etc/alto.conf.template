@@ -52,8 +52,8 @@ metrics = {
 
 # Default authentication to access an ALTO server
 auth_type = userpass
-username = admin
-password = admin
+username = cern
+password = lhcone
 
 ####################################################
 # Configure an ALTO server
@@ -63,10 +63,22 @@ password = admin
 db_config = {
   "default": {
     "forwarding": {
-      "backend": "local"
+      "backend": "redis",
+      "host": "localhost",
+      "port": 6379,
+      "db": 0
     },
     "endpoint": {
-      "backend": "local"}}}
+      "backend": "redis",
+      "host": "localhost",
+      "port": 6379,
+      "db": 0
+    },
+    "delegate": {
+      "backend": "redis",
+      "host": "localhost",
+      "port": 6379,
+      "db": 0}}}
 
 default_namespace = default
 

@@ -79,7 +79,7 @@ class PathVectorView(APIView):
         content_type = self.renderer_classes[0]().get_context_type()
         host_name = request.get_host()
 
-        content = get_content(algorithm, post_data, resource_id, host_name)
+        content = get_content(self.algorithm, post_data, self.resource_id, host_name)
         return Response(content, content_type=content_type)
 
 

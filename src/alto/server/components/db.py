@@ -163,7 +163,7 @@ class DataBroker:
 
     def _parse_key(self, key):
         componets = key.split(b':')
-        return componets[2], b':'.join(componets[1:])
+        return b':'.join(componets[2:-1]), b':'.join(componets[1:])
 
     def build_cache(self):
         """
@@ -595,15 +595,15 @@ class DelegateTransaction(Transaction):
             Configuration of how to access the delegated data source.
         """
         if self.db.backend == 'redis':
-            keys = list(self.db._backend.scan_iter(match='{}:{}:{}'.format(self.db.ns, self.db.type, data_source_name)))
+            keys = list(self.db._backend.scan_iter(match='{}:{}:{}:*'.format(self.db.ns, self.db.type, data_source_name)))
         elif self.db.backend == 'local':
-            keys = list(self.db._backend.scan_iter(match='{}:{}:{}'.format(self.db.ns, self.db.type, data_source_name)))
+            keys = list(self.db._backend.scan_iter(match='{}:{}:{}:'.format(self.db.ns, self.db.type, data_source_name)))
         else:
             raise NotImplementedError()
         if len(keys) > 0:
             self._pipe.delete(*keys)
 
-        full_key = '{}:{}:{}'.format(self.db.ns, self.db.type, data_source_name)
+        full_key = '{}:{}:{}:{}'.format(self.db.ns, self.db.type, data_source_name, uuid.uuid1())
         self._pipe.set(full_key, json.dumps(data_source_config, sort_keys=True))
 
     def commit(self):
