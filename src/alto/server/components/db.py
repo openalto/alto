@@ -1,9 +1,13 @@
 import hashlib
+import importlib
 import json
 import uuid
 import ipaddress
 
 from pytricia import PyTricia
+
+from alto.common.error import NotSupportedError
+from alto.utils import load_class
 
 
 class DataBrokerManager(object):
@@ -76,6 +80,16 @@ class LocalDB:
     def set(self, key, val):
         self._base[key] = val
 
+    def scan_iter(self, key_pattern=None, prefix=None):
+        key_cond = lambda k: True
+        if key_pattern:
+            import re
+            key_re = re.compile(key_pattern)
+            key_cond = lambda k: key_re.fullmatch(k)
+        elif prefix:
+            key_cond = lambda k: k.startswith(prefix)
+        return [k for k in self._base.keys() if key_cond(k)]
+
     def pipeline(self):
         return LocalPipe(self)
 
@@ -93,6 +107,9 @@ class LocalPipe:
 
     def set(self, key, val):
         self._base[key] = val
+
+    def delete(self, key):
+        del self._base[key]
 
     def execute(self):
         self.db._base = self._base
@@ -121,8 +138,7 @@ class DataBroker:
             import redis
             self._backend = redis.Redis(**kwargs)
         else:
-            # TODO: define common errors for ALTO DB
-            raise NotImplementedError
+            raise NotSupportedError()
         data_broker_manager.register(self.ns, self.type, self)
 
     def _lookup(self, key):
@@ -274,8 +290,10 @@ class ForwardingDB(DataBroker):
         _base = dict()
         if self.backend == 'redis':
             keys = self._backend.scan_iter(match='{}:{}:*'.format(self.ns, self.type))
+        elif self.backend == 'local':
+            keys = self._backend.scan_iter(prefix='{}:{}:'.format(self.ns, self.type))
         else:
-            raise NotImplementedError()
+            raise NotSupportedError()
         for key in keys:
             dpid, suffix_key = self._parse_key(key)
             rule_json = self._backend.get(key)
@@ -373,8 +391,10 @@ class ForwardingTransaction(Transaction):
             self._dpids.add(dpid)
             if self.db.backend == 'redis':
                 keys = list(self.db._backend.scan_iter(match='{}:{}:{}:*'.format(self.db.ns, self.db.type, dpid)))
+            elif self.db.backend == 'local':
+                keys = self._backend.scan_iter(prefix='{}:{}:{}:'.format(self.ns, self.type, dpid))
             else:
-                raise NotImplementedError()
+                raise NotSupportedError()
             if len(keys) > 0:
                 self._pipe.delete(*keys)
         full_key = '{}:{}:{}:{}'.format(self.db.ns, self.db.type, dpid, uuid.uuid1())
@@ -398,8 +418,10 @@ class EndpointDB(DataBroker):
         _base = dict()
         if self.backend == 'redis':
             keys = self._backend.scan_iter(match='{}:{}:*'.format(self.ns, self.type))
+        elif self.backend == 'local':
+            keys = self._backend.scan_iter(prefix='{}:{}:'.format(self.ns, self.type))
         else:
-            raise NotImplementedError()
+            raise NotSupportedError()
         for key in keys:
             prop_name, suffix_key = self._parse_key(key)
             prop_json = self._backend.get(key)
@@ -473,6 +495,8 @@ class EndpointTransaction(Transaction):
                 self.prop_names.add(prop_name)
                 if self.db.backend == 'redis':
                     keys = list(self.db._backend.scan_iter(match='{}:{}:{}:*'.format(self.db.ns, self.db.type, prop_name)))
+                elif self.db.backend == 'local':
+                    keys = list(self.db._backend.scan_iter(prefix='{}:{}:{}:'.format(self.db.ns, self.db.type, prop_name)))
                 else:
                     raise NotImplementedError()
                 if len(keys) > 0:
@@ -483,6 +507,104 @@ class EndpointTransaction(Transaction):
             prop_obj['endpoint'] = endpoint
             prop_obj['val'] = prop_val
             self._pipe.set(full_key, json.dumps(prop_obj, sort_keys=True))
+
+    def commit(self):
+        self._pipe.execute()
+
+
+class DelegateDB(DataBroker):
+    """
+    Class of the data broker maintaining delegate data sources.
+    """
+
+    def __init__(self, namespace='default', backend='redis', **kwargs):
+        self.type = 'delegate'
+        self._base = dict()
+        super().__init__(namespace=namespace, backend=backend, **kwargs)
+
+    def build_cache(self):
+        _base = dict()
+        if self.backend == 'redis':
+            keys = self._backend.scan_iter(match='{}:{}:*'.format(self.ns, self.type))
+        elif self.backend == 'local':
+            keys = self._backend.scan_iter(prefix='{}:{}:'.format(self.ns, self.type))
+        else:
+            raise NotSupportedError()
+        for key in keys:
+            data_source_name, _ = self._parse_key(key)
+            if type(data_source_name) is bytes:
+                data_source_name = data_source_name.decode()
+            data_source_json = self._backend.get(key)
+            data_source_config = json.loads(data_source_json)
+
+            _base[data_source_name] = data_source_config
+        for data_source_name in _base.keys():
+            self._base[data_source_name] = _base[data_source_name]
+
+    def lookup(self, data_source_name, *args, **kwargs):
+        """
+        Get data from a delegated data source.
+
+        Parameters
+        ----------
+        data_source_name : str
+            The name of a delegated data source.
+        args : list
+            Unnamed arguments for data source query.
+        kwargs : dict
+            Keyword arguments for data source query.
+
+        Returns
+        -------
+        data : Any
+            Response of the data source query.
+        """
+        # data_source_config_json = self._lookup('{}:{}'.format(self.type, data_source_name))
+        # data_source_config = json.loads(data_source_config_json)
+        data_source_config = self._base.get(data_source_name)
+        data_source_cls = data_source_config.pop('data_source_cls')
+        try:
+            cls = load_class(data_source_cls)
+        except Exception as e:
+            print(e)
+            return
+        data_source = cls(**data_source_config)
+        return data_source.lookup(*args, **kwargs)
+
+    def new_transaction(self):
+        return DelegateTransaction(self)
+
+
+class DelegateTransaction(Transaction):
+    """
+    Class of the trasaction for delegate database.
+    """
+    def __init__(self, db):
+        super().__init__(db)
+        self.prop_names = set()
+
+    def add_data_source(self, data_source_name, **data_source_config):
+        """
+        Add a delegated data source.
+
+        Parameters
+        ----------
+        data_source_name : str
+            Name to the delegated data source.
+        data_source_config : dict
+            Configuration of how to access the delegated data source.
+        """
+        if self.db.backend == 'redis':
+            keys = list(self.db._backend.scan_iter(match='{}:{}:{}:*'.format(self.db.ns, self.db.type, data_source_name)))
+        elif self.db.backend == 'local':
+            keys = list(self.db._backend.scan_iter(match='{}:{}:{}:'.format(self.db.ns, self.db.type, data_source_name)))
+        else:
+            raise NotImplementedError()
+        if len(keys) > 0:
+            self._pipe.delete(*keys)
+
+        full_key = '{}:{}:{}:{}'.format(self.db.ns, self.db.type, data_source_name, uuid.uuid1())
+        self._pipe.set(full_key, json.dumps(data_source_config, sort_keys=True))
 
     def commit(self):
         self._pipe.execute()

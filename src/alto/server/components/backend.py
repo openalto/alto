@@ -1,10 +1,104 @@
+# -*- coding: utf-8 -*-
+# The MIT License (MIT)
+#
+# Copyright (c) 2021 OpenALTO Community
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# Authors:
+# - Jensen Zhang <jingxuan.n.zhang@gmail.com>
+# - Kai Gao <emiapwil@gmail.com>
+
 from .db import data_broker_manager
 
-class PathVectorService:
 
-    def __init__(self, namespace, autoreload=True) -> None:
-        """
-        """
+class IRDService:
+    """
+    Backend algorithm for IRD generation.
+    """
+
+    def __init__(self, namespace, **kwargs):
+        self.ns = namespace
+
+    def list_resources(self):
+        pass
+
+
+class EndpointPropertyService:
+    """
+    Backend algorithm for EPS.
+    """
+
+    def __init__(self, namespace, autoreload=True, **kwargs):
+        self.ns = namespace
+        self.autoreload = autoreload
+        self.eb = data_broker_manager.get(self.ns, db_type='endpoint')
+
+    def lookup(self, endpoints, prop_names):
+        property_map = dict()
+        if self.autoreload:
+            self.eb.build_cache()
+        for endpoint in endpoints:
+            property_map[endpoint] = self.eb.lookup(endpoint, prop_names)
+        return property_map
+
+
+class GeoIPPropertyService:
+    """
+    Backend algorithm for entity property using GeoIP database.
+    """
+
+    def __init__(self, namespace, data_source=None, autoreload=True, **kwargs):
+        self.ns = namespace
+        self.autoreload = autoreload
+        self.db = data_broker_manager.get(self.ns, db_type='delegate')
+        self.data_source = data_source
+
+    def lookup(self, entities):
+        if self.autoreload:
+            self.db.build_cache()
+
+        endpoints = dict()
+        for e in entities:
+            domain, entityid = e.split(':', 1)
+            if domain not in endpoints:
+                endpoints[domain] = []
+            endpoints[domain].append(entityid)
+        geomap = dict()
+        for domain in endpoints.keys():
+            geomap[domain] = self.db.lookup(self.data_source, endpoints[domain])
+        property_map = dict()
+        for domain in geomap.keys():
+            for entityid, geoinfo in geomap[domain].items():
+                endpoint = '{}:{}'.format(domain, entityid)
+                property_map[endpoint] = dict()
+                property_map[endpoint]['geolocation'] = {"lat": geoinfo[0],
+                                                         "lng": geoinfo[1]}
+        return property_map
+
+
+class PathVectorService:
+    """
+    Backend algorithm for ECS with path vector extension
+    """
+
+    def __init__(self, namespace, autoreload=True, **kwargs) -> None:
         self.ns = namespace
         self.autoreload = autoreload
         self.fib = data_broker_manager.get(self.ns, db_type='forwarding')
@@ -120,3 +214,4 @@ class PathVectorService:
                         for ane, props in property_map.items()}
 
         return paths, property_map
+

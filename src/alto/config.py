@@ -73,7 +73,9 @@ class Config:
             config_paths = [os.path.join(d, CONFIG_FILE) for d in get_ordered_config_dirs()]
             self.location = next(iter(filter(os.path.exists, config_paths)), None)
 
-
+    ####################
+    # ALTO client config
+    ####################
     def get_server_auth(self):
         self.parser.read(self.location)
         auth_type = self.parser.get('client', 'auth_type')
@@ -103,13 +105,34 @@ class Config:
         uri = self.parser.get('client', 'default_costmap')
         return uri
 
+
     def get_static_resource_uri(self, resource_id):
         self.parser.read(self.location)
         static_ird = json.loads(self.parser.get('client', 'static_ird').strip())
         return static_ird.get(resource_id)
+
 
     def get_resource_spec_by_metric(self, metric):
         self.parser.read(self.location)
         metric_resources = json.loads(self.parser.get('client', 'metrics').strip())
         return metric_resources.get(metric)
 
+
+    ####################
+    # ALTO server config
+    ####################
+    def get_db_config(self):
+        self.parser.read(self.location)
+        db_config = json.loads(self.parser.get('server', 'db_config').strip())
+        return db_config
+
+
+    def get_configured_resources(self):
+        self.parser.read(self.location)
+        resources = json.loads(self.parser.get('server', 'resources').strip())
+        return resources
+
+
+    def get_default_namespace(self):
+        self.parser.read(self.location)
+        return self.parser.get('server', 'default_namespace') or 'default'

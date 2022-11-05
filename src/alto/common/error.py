@@ -24,17 +24,10 @@
 # Authors:
 # - Jensen Zhang <jingxuan.n.zhang@gmail.com>
 
-####################################################
-# Configure an ALTO client
-####################################################
-[client]
-# ALTO server
-default_ird = http://localhost:8181/alto/simpleird/default
-default_networkmap = http://localhost:8181/alto/networkmap/default-networkmap
-default_costmap = http://localhost:8181/alto/costmap/default-costmap
-auth_type = userpass
-username = admin
-password = admin
+class NotSupportedError(Exception):
+    """
+    Raise this error when an option is unspported.
+    """
 
-[http]
-retry = 3
+    def __init__(self, *args: object) -> None:
+        super().__init__(*args)

@@ -5,6 +5,7 @@ from service import Service
 
 from alto.server.components.datasource import DBInfo
 from alto.common.logging import fail_with_msg
+from alto.utils import load_class
 
 class AgentService(Service):
 
@@ -22,15 +23,18 @@ class AgentService(Service):
                 time.sleep(10)
 
 def setup_debug_db():
-    import alto.server.django_server.django_server.settings as conf_settings
-    from alto.server.components.db import data_broker_manager, ForwardingDB, EndpointDB
+    from alto.config import Config
+    from alto.server.components.db import data_broker_manager, ForwardingDB, EndpointDB, DelegateDB
 
-    for ns, ns_config in conf_settings.DB_CONFIG.items():
+    config = Config()
+    for ns, ns_config in config.get_db_config().items():
         for db_type, db_config in ns_config.items():
             if db_type == 'forwarding':
                 db = ForwardingDB(namespace=ns, **db_config)
             elif db_type == 'endpoint':
                 db = EndpointDB(namespace=ns, **db_config)
+            elif db_type == 'delegate':
+                db = DelegateDB(namespace=ns, **db_config)
             else:
                 db = None
             if db:
@@ -88,9 +92,7 @@ if __name__ == '__main__':
             agent_class = args.agent_class
 
         try:
-            pkg_name, cls_name = agent_class.rsplit('.', 1)
-            pkg = importlib.import_module(pkg_name)
-            cls = pkg.__getattribute__(cls_name)
+            cls = load_class(agent_class)
         except Exception as e:
             print(e)
             fail_with_msg(logging.CRITICAL, 'Failed to load class %s' % (agent_class))

@@ -12,12 +12,14 @@ services:
     image: openalto/alto
     volumes:
       - ./src/alto:/usr/local/lib/python3.10/site-packages/alto
+      - ./etc/alto.conf:/opt/alto/etc/alto.conf
     entrypoint: gunicorn
-    command: ["-b", "0.0.0.0:8000", "--reload", "alto.server.django_server.django_server.wsgi", "--preload"]
+    command: ["-b", "0.0.0.0:8000", "--reload", "alto.server.northbound.wsgi", "--preload", "--capture-output"]
   alto-lg-agent:
     image: openalto/alto
     volumes:
       - ./etc/lg-agent.json:/etc/lg-agent.json
+      - ./etc/alto.conf:/opt/alto/etc/alto.conf
     entrypoint: python
     command: ["-m", "alto.agent.manage", "--pid", "/tmp", "start", "-c", "/etc/lg-agent.json", "-D", "cernlg"]
     network_mode: "service:alto-frontend"
@@ -25,6 +27,7 @@ services:
     image: openalto/alto
     volumes:
       - ./etc/cric-agent.json:/etc/cric-agent.json
+      - ./etc/alto.conf:/opt/alto/etc/alto.conf
     entrypoint: python
     command: ["-m", "alto.agent.manage", "--pid", "/tmp", "start", "-c", "/etc/cric-agent.json", "-D", "cric"]
     network_mode: "service:alto-frontend"

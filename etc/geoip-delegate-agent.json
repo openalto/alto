@@ -1,0 +1,10 @@
+{
+    "namespace": "default",
+    "agent_class": "alto.agent.delegate.DelegateAgent",
+    "data_source_name": "geoip",
+    "data_source_config": {
+        "data_source_cls": "alto.agent.geoip.GeoipAgent",
+        "db_path": "/opt/geoip2/GeoLite2-City.mmdb"
+    },
+    "refresh_interval": 300
+}

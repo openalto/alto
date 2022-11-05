@@ -24,17 +24,26 @@
 # Authors:
 # - Jensen Zhang <jingxuan.n.zhang@gmail.com>
 
-####################################################
-# Configure an ALTO client
-####################################################
-[client]
-# ALTO server
-default_ird = http://localhost:8181/alto/simpleird/default
-default_networkmap = http://localhost:8181/alto/networkmap/default-networkmap
-default_costmap = http://localhost:8181/alto/costmap/default-costmap
-auth_type = userpass
-username = admin
-password = admin
+import pytest
 
-[http]
-retry = 3
+from alto.server.components.db import DataBrokerManager, EndpointDB, ForwardingDB
+from alto.common.error import NotSupportedError
+
+__author__ = "OpenALTO"
+__copyright__ = "OpenALTO"
+__license__ = "MIT"
+
+
+def test_databroker():
+    dbm = DataBrokerManager()
+
+    _fib = ForwardingDB(backend='local')
+    fib = dbm.get('default', 'forwarding')
+    assert fib is _fib
+
+    _eb = EndpointDB(backend='local')
+    eb = dbm.get('default', 'endpoint')
+    assert eb is _eb
+
+    with pytest.raises(NotSupportedError):
+        _ = ForwardingDB(backend='not-supported')

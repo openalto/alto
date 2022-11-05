@@ -24,12 +24,12 @@ There are several options to start the ALTO server frontend.
 Option 1: start the ALTO server using the `manage.py` app:
 
 ``` sh
-python -m alto.server.django_server.manage runserver 0.0.0.0:8000
+python -m alto.server.northbound.manage runserver 0.0.0.0:8000
 ```
 
 Option 2: start the ALTO server as a WSGI using gunicorn:
 
 ``` sh
-gunicorn -b 0.0.0.0:8000 alto.server.django_server.django_server.wsgi
+gunicorn -b 0.0.0.0:8000 alto.server.northbound.wsgi
 ```
 
