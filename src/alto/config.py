@@ -78,7 +78,7 @@ class Config:
     ####################
     def get_server_auth(self):
         self.parser.read(self.location)
-        auth_type = self.parser.get('client', 'auth_type')
+        auth_type = self.parser.get('client', 'auth_type', fallback=None)
         auth = None
         if auth_type == 'userpass':
             auth = (
@@ -90,31 +90,31 @@ class Config:
 
     def get_default_ird_uri(self):
         self.parser.read(self.location)
-        uri = self.parser.get('client', 'default_ird')
+        uri = self.parser.get('client', 'default_ird', fallback=None)
         return uri
 
 
     def get_default_networkmap_uri(self):
         self.parser.read(self.location)
-        uri = self.parser.get('client', 'default_networkmap')
+        uri = self.parser.get('client', 'default_networkmap', fallback=None)
         return uri
 
 
     def get_default_costmap_uri(self):
         self.parser.read(self.location)
-        uri = self.parser.get('client', 'default_costmap')
+        uri = self.parser.get('client', 'default_costmap', fallback=None)
         return uri
 
 
     def get_static_resource_uri(self, resource_id):
         self.parser.read(self.location)
-        static_ird = json.loads(self.parser.get('client', 'static_ird').strip())
+        static_ird = json.loads(self.parser.get('client', 'static_ird', fallback='{}').strip())
         return static_ird.get(resource_id)
 
 
     def get_resource_spec_by_metric(self, metric):
         self.parser.read(self.location)
-        metric_resources = json.loads(self.parser.get('client', 'metrics').strip())
+        metric_resources = json.loads(self.parser.get('client', 'metrics', fallback='{}').strip())
         return metric_resources.get(metric)
 
 
@@ -123,16 +123,28 @@ class Config:
     ####################
     def get_db_config(self):
         self.parser.read(self.location)
-        db_config = json.loads(self.parser.get('server', 'db_config').strip())
+        db_config = json.loads(self.parser.get('server', 'db_config', fallback='{}').strip())
         return db_config
 
 
     def get_configured_resources(self):
         self.parser.read(self.location)
-        resources = json.loads(self.parser.get('server', 'resources').strip())
+        resources = json.loads(self.parser.get('server', 'resources', fallback='{}').strip())
         return resources
 
 
     def get_default_namespace(self):
         self.parser.read(self.location)
-        return self.parser.get('server', 'default_namespace') or 'default'
+        return self.parser.get('server', 'default_namespace', fallback='default')
+
+
+    def get_server_base_uri(self):
+        self.parser.read(self.location)
+        return self.parser.get('server', 'base_uri', fallback=None)
+
+
+    def get_server_cost_types(self):
+        self.parser.read(self.location)
+        cost_types_json = self.parser.get('server', 'cost_types', fallback=None)
+        if cost_types_json:
+            return json.loads(cost_types_json.strip())
