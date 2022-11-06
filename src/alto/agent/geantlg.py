@@ -89,7 +89,7 @@ class LookingGlassAgent(DataSourceAgent):
 
     def get_routes(self, ipprefix=None, router=None, selected=False):
         """
-        Get a route entries.
+        Get route entries for a single router.
 
         Parameters
         ----------
@@ -98,6 +98,8 @@ class LookingGlassAgent(DataSourceAgent):
         router : str
             Name of the looking glass router. If None, `default_router` will be
             used.
+        selected : bool
+            Whether only return selected routes or not.
 
         Returns
         -------
@@ -114,11 +116,71 @@ class LookingGlassAgent(DataSourceAgent):
                 routes[p] = [r for r in routes[p] if r.get('selected')]
         return routes
 
+    def _do_batch_query(self, router_list=None, args=None):
+        results = []
+        for prefix in args:
+            try:
+                data = requests.post(self.uri,
+                                    json={
+                                        'selectedRouters': [{"name": r} for r in router_list],
+                                        'selectedCommand': {
+                                            'value': f'show route {prefix} | display xml'
+                                        },
+                                    },
+                                    headers={
+                                        'Content-Type': 'application/json'
+                                    },
+                                    proxies=self.proxies)
+                for router in router_list:
+                    results_dict = dict()
+                    doctree = data.json()['output'][router]['commandResult']
+                    query_result = json.loads(json.dumps(xmltodict.parse(doctree)))
+                    for table in query_result["rpc-reply"]["route-information"]["route-table"]:
+                        if table["table-name"] == "lhcone-l3vpn.inet.0":
+                            results_dict.update({prefix : table})
+                    results.append(results_dict)
+            except:
+                logging.warn(f"Error fetching prefix {prefix} for batch; skipping")
+        return results
+
+    def get_batch_routes(self, ipprefix=None, router_list=None, selected=False):
+        """
+        Get a route entries.
+
+        Parameters
+        ----------
+        ipprefix : str
+            Destination IP prefix to lookup. If None, `prefixes` will be used.
+        router : str
+            Name of the looking glass router. If None, `listened_routers` will be
+            used.
+        selected : bool
+            Whether only return selected routes or not.
+
+        Returns
+        -------
+        routes : list
+            All the route entries for the given destination IP prefix.
+        """
+        logging.info('Loading routes for batch')
+        args = ipprefix if ipprefix else self.prefixes
+        router_list = router_list if router_list else self.listened_routers
+        list_of_results_dict = self._do_batch_query(router_list=router_list, args=args)
+        logging.info('Parsing routes for batch')
+        routes_dict = []
+        for i, r in enumerate(router_list):
+            routes = self._parse_routes(list_of_results_dict[i])
+            if selected:
+                for p in routes:
+                    routes[p] = [r for r in routes[p] if r.get('selected')]
+            routes_dict[r] = routes
+        return routes_dict
+
     def update(self):
         fib_trans = self.db[0].new_transaction()
+        routes_dict = self.get_batch_routes(selected=True)
         for _router in self.listened_routers:
-            routes = self.get_routes(router=_router, selected=True)
-            for dst_prefix, route in routes.items():
+            for dst_prefix, route in routes_dict[_router].items():
                 if route:
                     route = route[0]
                 else:
