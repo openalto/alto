@@ -26,7 +26,7 @@
 .. image:: https://github.com/openalto/alto/actions/workflows/unittest.yml/badge.svg
     :alt: Unit Tests by GitHub Actions
     :target: https://github.com/openalto/alto/actions/workflows/unittest.yml
-.. image:: https://codecov.io/gh/openalto/alto/branch/master/graph/badge.svg?token=bShFzsuWpy
+.. image:: https://codecov.io/gh/openalto/alto/branch/main/graph/badge.svg?token=bShFzsuWpy
     :alt: Code Coverage by Codecov
     :target: https://codecov.io/gh/openalto/alto
 
