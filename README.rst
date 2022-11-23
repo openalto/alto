@@ -23,15 +23,18 @@
         :alt: Twitter
         :target: https://twitter.com/alto
 
-.. image:: https://img.shields.io/badge/-PyScaffold-005CA0?logo=pyscaffold
-    :alt: Project generated with PyScaffold
-    :target: https://pyscaffold.org/
+.. image:: https://github.com/openalto/alto/actions/workflows/unittest.yml/badge.svg
+    :alt: Unit Tests by GitHub Actions
+    :target: https://github.com/openalto/alto/actions/workflows/unittest.yml
+.. image:: https://codecov.io/gh/openalto/alto/branch/master/graph/badge.svg?token=3FccL61hLH 
+    :alt: Code Coverage by Codecov
+    :target: https://codecov.io/gh/openalto/alto
 
 |
 
-====
-alto
-====
+========
+OpenALTO
+========
 
 
     Standard Application-Layer Traffic Optimization (ALTO) Toolset.
@@ -45,8 +48,46 @@ This ALTO toolset includes the following basic components:
 * ALTO Protocol Parser
 * ALTO Client Library
 * ALTO Client CLI
+* OpenALTO Server Stack
 
-.. _pyscaffold-notes:
+    * OpenALTO Data Source Agent Framework
+
+    * OpenALTO Database Shim Layer
+
+    * OpenALTO Service Backend
+
+    * OpenALTO Protocol Northbound
+
+
+Server Deployment
+=================
+
+Quick set up with ``docker`` and ``docker-compose``:
+
+.. code-block:: bash
+
+    $ docker build -t openalto/alto .
+    $ docker-compose up -d
+
+To deploy openalto without docker, please make sure you have the following
+required packages:
+
+* Python >= 3.6.8
+* Redis
+
+.. code-block:: bash
+
+    $ pip3 install .
+    $ pip3 install redis
+    $ gunicorn -b 0.0.0.0:8000 --reload --preload --capture-output --error-logfile /tmp/openalto-error.log --access-logfile /tmp/openalto-access.log alto.server.northbound.wsgi -D
+    $ python3 -m alto.agent.manage --pid /tmp start -c etc/lg-agent.json -D cernlg
+    $ python3 -m alto.agent.manage --pid /tmp start -c etc/cric-agent.json -D cric
+    $ python3 -m alto.agent.manage --pid /tmp start -c etc/geoip-delegate-agent.json -D geoip
+
+To deploy openalto in kubernetes:
+
+    Coming soon...
+
 
 Note
 ====

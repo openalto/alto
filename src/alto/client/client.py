@@ -30,7 +30,7 @@ import logging
 from typing import List, Dict
 
 from alto.config import Config
-from alto.model import ALTONetworkMap, ALTOCostMap, ALTOPathVector
+from alto.model import ALTONetworkMap, ALTOCostMap, ALTOEndpointCost, ALTOPathVector
 
 _logger = logging.getLogger(__name__)
 
@@ -50,9 +50,14 @@ class Client:
         if config:
             self.config = Config()
 
-    def get_resource(self, url=None, resource_type='cost-map', **kwargs):
+    def get_resource(self, resource_id=None, url=None, resource_type='cost-map', **kwargs):
         """
+        Get ALTO information resource.
         """
+        if resource_id:
+            url = self.config.get_static_resource_uri(resource_id)
+        if not url:
+            return
         if resource_type == 'cost-map':
             return self.get_cost_map(url=url, **kwargs)
         elif resource_type == 'endpoint-cost':
@@ -105,13 +110,36 @@ class Client:
         nm = self.get_network_map(url=kwargs.pop('dependent_network_map', None))
         return ALTOCostMap(url, auth=auth, dependent_network_map=nm, **kwargs)
 
+    def get_endpoint_cost(self, url, cost_mode='numerical', cost_metric='routingcost', **kwargs):
+        """
+        Low-level API: get raw endpoint cost query object.
+
+        Parameters
+        ----------
+        url : str
+            URI to access the endpoint cost query object.
+        cost_mode : str
+            Default cost mode to query endpoint costs.
+        cost_metric : str
+            Default cost metric to query endpoint costs.
+
+        Returns
+        -------
+        ALTOEndpointCost
+            ALTO Endpoint Cost query object.
+        """
+        auth = self.config.get_server_auth()
+        if self.auth:
+            auth = self.auth
+        return ALTOEndpointCost(url, cost_mode, cost_metric, auth=auth, verify=False, **kwargs)
+
     def get_path_vector(self, url, **kwargs):
         """
         Low-level API: get raw path vector query object.
 
         Parameters
         ----------
-        url : (optional) str
+        url : str
             URI to access the path vector query object.
 
         Returns

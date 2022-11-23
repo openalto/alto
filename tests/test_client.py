@@ -29,75 +29,12 @@ import pytest
 from unittest import mock
 
 from alto.client import Client
-from alto.model.rfc7285 import ALTO_CTYPE_NM, ALTO_CTYPE_CM
+from alto.mock import mocked_requests_get
 
 __author__ = "OpenALTO"
 __copyright__ = "OpenALTO"
 __license__ = "MIT"
 
-
-TEST_DEFAULT_NM = {
-    "meta" : {
-        "vtag": {
-            "resource-id": "my-default-network-map",
-            "tag": "da65eca2eb7a10ce8b059740b0b2e3f8eb1d4785"
-        }
-    },
-    "network-map" : {
-        "PID1" : {
-            "ipv4" : [
-                "192.0.2.0/24",
-                "198.51.100.0/25"
-            ]
-        },
-        "PID2" : {
-            "ipv4" : [
-                "198.51.100.128/25"
-            ]
-        },
-        "PID3" : {
-            "ipv4" : [
-                "0.0.0.0/0"
-            ],
-            "ipv6" : [
-                "::/0"
-            ]
-        }
-    }
-}
-
-TEST_DEFAULT_CM = {
-    "meta" : {
-        "dependent-vtags" : [
-            {"resource-id": "my-default-network-map",
-             "tag": "3ee2cb7e8d63d9fab71b9b34cbf764436315542e"
-             }
-        ],
-        "cost-type" : {"cost-mode"  : "numerical",
-                       "cost-metric": "routingcost"
-                       }
-    },
-    "cost-map" : {
-        "PID1": { "PID1": 1,  "PID2": 5,  "PID3": 10 },
-        "PID2": { "PID1": 5,  "PID2": 1,  "PID3": 15 },
-        "PID3": { "PID1": 20, "PID2": 15  }
-    }
-}
-
-MOCK = [
-    {
-        'uri': 'http://localhost:8181/alto/networkmap/default-networkmap',
-        'headers': {'content-type': ALTO_CTYPE_NM},
-        'json': TEST_DEFAULT_NM,
-        'status_code': 200
-    },
-    {
-        'uri': 'http://localhost:8181/alto/costmap/default-costmap',
-        'headers': {'content-type': ALTO_CTYPE_CM},
-        'json': TEST_DEFAULT_CM,
-        'status_code': 200
-    }
-]
 
 def test_client_noimpl():
     """ALTO Client Tests"""
@@ -106,29 +43,10 @@ def test_client_noimpl():
         ac.get_ird()
 
 
-def mocked_requests_get(uri, *args, **kwars):
-    class MockResponse:
-        def __init__(self, headers=dict(), json_data=None, status_code=200):
-            self.headers = headers
-            self.json_data = json_data
-            self.status_code = status_code
-
-        def raise_for_status(self):
-            pass
-
-        def json(self):
-            return self.json_data
-
-    for mock_item in MOCK:
-        if uri == mock_item.get('uri'):
-            return MockResponse(headers=mock_item.get('headers'),
-                                json_data=mock_item.get('json'),
-                                status_code=mock_item.get('status_code'))
-
-
 @mock.patch('requests.get', side_effect=mocked_requests_get)
+@mock.patch('requests.post', side_effect=mocked_requests_get)
 def test_client_config(*args):
-    os.environ['ALTO_CONFIG'] = os.path.join(os.path.dirname(__file__), '../etc/alto.conf.test')
+    os.environ.setdefault('ALTO_CONFIG', os.path.join(os.path.dirname(__file__), '../etc/alto.conf.test'))
     ac = Client()
 
     nm = ac.get_network_map()
@@ -155,3 +73,49 @@ def test_client_config(*args):
     assert '198.51.100.2' in dst_costs2 and '198.51.100.254' in dst_costs2
     assert dst_costs2['198.51.100.2'] == 1 and dst_costs2['198.51.100.254'] == 5
 
+    cm_bw = ac.get_resource('costmap-bw-available')
+    costs_bw = cm_bw.get_costs(['PID1'], ['PID2'])
+    assert 'PID1' in costs_bw
+    dst_costs_bw = costs_bw['PID1']
+    assert 'PID2' in dst_costs_bw
+    assert dst_costs_bw['PID2'] == 1000
+
+    cm_delay = ac.get_resource('costmap-delay-ow')
+    costs_delay = cm_delay.get_costs(['PID1'], ['PID2'])
+    assert 'PID1' in costs_delay
+    dst_costs_delay = costs_delay['PID1']
+    assert 'PID2' in dst_costs_delay
+    assert dst_costs_delay['PID2'] == 50
+
+    ecs = ac.get_resource('ecs', resource_type='endpoint-cost')
+    ecosts_rc = ecs.get_endpoint_costs(['192.0.2.100'], ['198.51.100.2', '198.51.100.254'])
+    assert '192.0.2.100' in ecosts_rc
+    dst_ecosts_rc = ecosts_rc['192.0.2.100']
+    assert '198.51.100.2' in dst_ecosts_rc and '198.51.100.254' in dst_ecosts_rc
+    assert dst_ecosts_rc['198.51.100.2'] == 1 and dst_ecosts_rc['198.51.100.254'] == 5
+
+    pv = ac.get_resource('ecs-pv', resource_type='path-vector', reverse=True)
+    ecosts_pv = pv.get_endpoint_costs(['192.0.2.100'], ['198.51.100.2', '198.51.100.254'])
+    assert '192.0.2.100' in ecosts_pv
+    dst_ecosts_pv = ecosts_pv['192.0.2.100']
+    assert '198.51.100.2' in dst_ecosts_pv and '198.51.100.254' in dst_ecosts_pv
+    assert dst_ecosts_pv['198.51.100.2'] == 2 and dst_ecosts_pv['198.51.100.254'] == 4
+
+    mcosts = ac.get_multiple_costs(['192.0.2.100'], ['198.51.100.2', '198.51.100.254'],
+                                   metrics=['as-path-length', 'delay-ow', 'bw-available', 'routing-cost'])
+    assert '192.0.2.100' in mcosts
+    dst_mcosts = mcosts['192.0.2.100']
+    assert '198.51.100.2' in dst_mcosts and '198.51.100.254' in dst_mcosts
+    assert len(dst_mcosts['198.51.100.2']) == 4 and len(dst_mcosts['198.51.100.254']) == 4
+
+    routing_costs = ac.get_routing_costs(['192.0.2.100'], ['198.51.100.2', '198.51.100.254'],
+                                         cost_map='costmap-delay-ow')
+    assert '192.0.2.100' in routing_costs
+    dst_routing_costs = routing_costs['192.0.2.100']
+    assert '198.51.100.2' in dst_routing_costs and '198.51.100.254' in dst_routing_costs
+
+    pv_routing_costs = ac.get_routing_costs(['198.51.100.2', '198.51.100.254'], ['192.0.2.100'],
+                                            use_pv='ecs-pv')
+    assert '198.51.100.2' in pv_routing_costs and '198.51.100.254' in pv_routing_costs
+    assert '192.0.2.100' in pv_routing_costs['198.51.100.2']
+    assert '192.0.2.100' in pv_routing_costs['198.51.100.254']

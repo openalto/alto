@@ -32,9 +32,112 @@
 default_ird = http://localhost:8181/alto/simpleird/default
 default_networkmap = http://localhost:8181/alto/networkmap/default-networkmap
 default_costmap = http://localhost:8181/alto/costmap/default-costmap
+static_ird = {
+  "costmap-bw-available": "http://localhost:8181/alto/costmap/bw-available",
+  "costmap-delay-ow": "http://localhost:8181/alto/costmap/delay-ow",
+  "ecs": "http://localhost:8181/alto/ecs/routingcost",
+  "ecs-pv": "http://localhost:8181/alto/pathvector/pv"}
+metrics = {
+  "routing-cost": {
+    "resource_type": "endpoint-cost",
+    "url": "http://localhost:8181/alto/ecs/routingcost"
+  },
+  "bw-available": {
+    "resource_type": "cost-map",
+    "url": "http://localhost:8181/alto/costmap/bw-available",
+    "dependent_network_map": "http://localhost:8181/alto/networkmap/default-networkmap"
+  },
+  "delay-ow": {
+    "resource_type": "cost-map",
+    "url": "http://localhost:8181/alto/costmap/delay-ow",
+    "dependent_network_map": "http://localhost:8181/alto/networkmap/default-networkmap"
+  },
+  "as-path-length": {
+    "resource_type": "path-vector",
+    "url": "http://localhost:8181/alto/pathvector/pv",
+    "reverse": true,
+    "prop_names": ["as_path"]}}
 auth_type = userpass
 username = admin
 password = admin
 
+####################################################
+# Configure an ALTO server
+####################################################
+[server]
+# Configuration for backend databases
+db_config = {
+  "default": {
+    "forwarding": {
+      "backend": "local"
+    },
+    "endpoint": {
+      "backend": "local"
+    },
+    "delegate": {
+      "backend": "local"}}}
+
+default_namespace = default
+base_uri = https://alto.example.com/
+cost_types = {
+  "num-rc": {
+    "cost-mode": "numerical",
+    "cost-metric": "routingcost"
+  },
+  "path-vector": {
+    "cost-mode": "array",
+    "cost-metric": "ane-path"}}
+
+# Configuration for information resources
+resources = {
+  "directory": {
+    "type": "ird",
+    "path": "directory",
+    "namespace": "default",
+    "algorithm": "alto.server.components.backend.IRDService",
+    "params": {
+      "namespaces": []
+    }
+  },
+  "pv": {
+    "type": "path-vector",
+    "path": "pathvector",
+    "namespace": "default",
+    "algorithm": "alto.server.components.backend.PathVectorService",
+    "capabilities": {
+      "cost-type-names": [ "path-vector" ],
+      "ane-property-names": [ "next-hop", "as-path" ]
+    },
+    "params": {}
+  },
+  "geoip": {
+    "type": "entity-prop",
+    "path": "entityprop",
+    "namespace": "default",
+    "algorithm": "alto.server.components.backend.GeoIPPropertyService",
+    "capabilities": {
+      "mappings": {
+        "ipv4": [ "geolocation" ],
+        "ipv6": [ "geolocation" ]
+      }
+    },
+    "params": {
+      "data_source": "geoip"
+    }
+  },
+  "geodist": {
+    "type": "endpoint-cost",
+    "path": "endpointcost",
+    "namespace": "default",
+    "algorithm": "alto.server.components.backend.GeoDistanceService",
+    "capabilities": {
+      "cost-type-names": [ "num-rc" ]
+    },
+    "params": {
+      "data_source": "geoip"}}}
+
+####################################################
+# Common configuratoin
+####################################################
 [http]
 retry = 3

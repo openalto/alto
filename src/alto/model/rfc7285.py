@@ -269,15 +269,19 @@ class ALTOEndpointCost(ALTOBaseResource):
 
     def get_costs(self, sips: List[str],
                   dips: List[str]) -> Dict[str, Dict[str, Any]]:
-        sips = ['ipv{}:{}'.format(ipaddress.ip_address(s).version, s) for s in sips]
-        dips = ['ipv{}:{}'.format(ipaddress.ip_address(d).version, d) for d in dips]
-        data = self.__build_query(sips, dips)
+        sips = {s: 'ipv{}:{}'.format(ipaddress.ip_address(s).version, s) for s in sips}
+        dips = {d: 'ipv{}:{}'.format(ipaddress.ip_address(d).version, d) for d in dips}
+        data = self.__build_query(list(sips.values()), list(dips.values()))
         r = self.post(data)
-        self.from_payload(r.content)
+        self.from_payload(r.text)
 
         result = {}
-        for s in set(sips):
-            if s not in self.ecmap_:
+        for s in sips.keys():
+            if sips[s] not in self.ecmap_:
                 continue
-            result.update({s: {d: self.ecmap_[s][d] for d in set(dips) if d in self.ecmap_[s]}})
+            result.update({s: {d: self.ecmap_[sips[s]][dips[d]] for d in dips.keys() if dips[d] in self.ecmap_[sips[s]]}})
         return result
+
+    def get_endpoint_costs(self, sips: List[str],
+                           dips: List[str]) -> Dict[str, Dict[str, Any]]:
+        return self.get_costs(sips, dips)

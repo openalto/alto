@@ -72,11 +72,12 @@ class MultiPart:
 
 class ALTOPathVector(ALTOEndpointCost):
 
-    def __init__(self, url, **kwargs):
+    def __init__(self, url, reverse=False, **kwargs):
         self.ctype = ALTO_CTYPE_PV
         self.boundary = ''
         self.charset = None
         self.prop_names = kwargs.pop('prop_names', ['next_hop', 'as_path'])
+        self.reverse=reverse
         ALTOEndpointCost.__init__(self, url, 'array', 'ane-path', **kwargs)
 
     def check_headers(self, r):
@@ -108,9 +109,6 @@ class ALTOPathVector(ALTOEndpointCost):
         self.anepm_ = data['property-map']
 
     def __build_query(self, sips, dips, prop_names=[]):
-        sips = ['ipv{}:{}'.format(ipaddress.ip_address(s).version, s) for s in sips]
-        dips = ['ipv{}:{}'.format(ipaddress.ip_address(d).version, d) for d in dips]
-
         data = dict()
         data['cost-type'] = dict()
         data['cost-type']['cost-mode'] = self.cost_mode
@@ -125,25 +123,27 @@ class ALTOPathVector(ALTOEndpointCost):
 
     def get_costs(self, sips: List[str], dips: List[str],
                   prop_names: List[str]) -> Dict[str, Dict[str, Any]]:
-        data = self.__build_query(sips, dips, prop_names)
+        sips = {s: 'ipv{}:{}'.format(ipaddress.ip_address(s).version, s) for s in sips}
+        dips = {d: 'ipv{}:{}'.format(ipaddress.ip_address(d).version, d) for d in dips}
+        data = self.__build_query(list(sips.values()), list(dips.values()), prop_names)
         r = self.post(data)
         if self.charset:
             r.encoding = self.charset
         self.from_payload(r.text)
 
         ane_paths = {}
-        for s in set(sips):
-            if s not in self.ecmap_:
+        for s in sips.keys():
+            if sips[s] not in self.ecmap_:
                 continue
-            ane_paths.update({s: {d: self.ecmap_[s][d] for d in set(dips) if d in self.ecmap_[s]}})
+            ane_paths.update({s: {d: self.ecmap_[sips[s]][dips[d]] for d in dips.keys() if dips[d] in self.ecmap_[sips[s]]}})
         ane_props = {}
         for ane in self.anepm_:
             if ane.startswith('.ane:'):
                 ane_props[ane[5:]] = self.anepm_[ane]
         return ane_paths, ane_props
 
-    def get_endpoint_costs(self, sips: List[str], dips: List[str], reverse=True):
-        if reverse:
+    def get_endpoint_costs(self, sips: List[str], dips: List[str]):
+        if self.reverse:
             ane_paths, ane_props = self.get_costs(dips, sips, prop_names=self.prop_names)
         else:
             ane_paths, ane_props = self.get_costs(sips, dips, prop_names=self.prop_names)
@@ -159,7 +159,7 @@ class ALTOPathVector(ALTOEndpointCost):
                     if 'as_path' in prop:
                         as_path = prop['as_path'].split(' ')
                         c += len(as_path)
-                if reverse:
+                if self.reverse:
                     if d not in costs:
                         costs[d] = dict()
                     costs[d][s] = c
