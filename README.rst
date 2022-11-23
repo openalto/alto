@@ -26,7 +26,7 @@
 .. image:: https://github.com/openalto/alto/actions/workflows/unittest.yml/badge.svg
     :alt: Unit Tests by GitHub Actions
     :target: https://github.com/openalto/alto/actions/workflows/unittest.yml
-.. image:: https://codecov.io/gh/openalto/alto/branch/master/graph/badge.svg?token=3FccL61hLH 
+.. image:: https://codecov.io/gh/openalto/alto/branch/master/graph/badge.svg?token=bShFzsuWpy
     :alt: Code Coverage by Codecov
     :target: https://codecov.io/gh/openalto/alto
 
@@ -50,13 +50,10 @@ This ALTO toolset includes the following basic components:
 * ALTO Client CLI
 * OpenALTO Server Stack
 
-    * OpenALTO Data Source Agent Framework
-
-    * OpenALTO Database Shim Layer
-
-    * OpenALTO Service Backend
-
-    * OpenALTO Protocol Northbound
+  + OpenALTO Data Source Agent Framework
+  + OpenALTO Data Broker Manager
+  + OpenALTO Service Backend
+  + OpenALTO Protocol Northbound
 
 
 Server Deployment
