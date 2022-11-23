@@ -106,6 +106,14 @@ class Config:
         return uri
 
 
+    def get_resource_uri(self, resource_id):
+        uri = self.get_static_resource_uri(resource_id)
+        if not uri:
+            # TODO: try to get resource from IRD
+            pass
+        return uri
+
+
     def get_static_resource_uri(self, resource_id):
         self.parser.read(self.location)
         static_ird = json.loads(self.parser.get('client', 'static_ird', fallback='{}').strip())

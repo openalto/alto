@@ -59,27 +59,7 @@ password = lhcone
 # Configure an ALTO server
 ####################################################
 [server]
-# Configuration for backend databases
-db_config = {
-  "default": {
-    "forwarding": {
-      "backend": "redis",
-      "host": "localhost",
-      "port": 6379,
-      "db": 0
-    },
-    "endpoint": {
-      "backend": "redis",
-      "host": "localhost",
-      "port": 6379,
-      "db": 0
-    },
-    "delegate": {
-      "backend": "redis",
-      "host": "localhost",
-      "port": 6379,
-      "db": 0}}}
-
+# Configuration for server setup
 default_namespace = default
 base_uri = http://openalto.org/
 cost_types = {
@@ -122,6 +102,28 @@ resources = {
     },
     "params": {
       "data_source": "geoip"}}}
+
+# Configuration for backend databases
+db_config = {
+  "default": {
+    "forwarding": {
+      "backend": "redis",
+      "host": "localhost",
+      "port": 6379,
+      "db": 0
+    },
+    "endpoint": {
+      "backend": "redis",
+      "host": "localhost",
+      "port": 6379,
+      "db": 0
+    },
+    "delegate": {
+      "backend": "redis",
+      "host": "localhost",
+      "port": 6379,
+      "db": 0}}}
+
 
 ####################################################
 # Common configuratoin

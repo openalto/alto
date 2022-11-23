@@ -80,11 +80,11 @@ class LocalDB:
     def set(self, key, val):
         self._base[key] = val
 
-    def scan_iter(self, key_pattern=None, prefix=None):
+    def scan_iter(self, match=None, prefix=None):
         key_cond = lambda k: True
-        if key_pattern:
+        if match:
             import re
-            key_re = re.compile(key_pattern)
+            key_re = re.compile(match)
             key_cond = lambda k: key_re.fullmatch(k)
         elif prefix:
             key_cond = lambda k: k.startswith(prefix)
@@ -162,8 +162,9 @@ class DataBroker:
         return self._backend.get(full_key)
 
     def _parse_key(self, key):
-        componets = key.split(b':')
-        return b':'.join(componets[2:-1]), b':'.join(componets[1:])
+        sep = b':' if type(key) is bytes else ':'
+        componets = key.split(sep)
+        return sep.join(componets[2:-1]), sep.join(componets[1:])
 
     def build_cache(self):
         """
@@ -296,6 +297,8 @@ class ForwardingDB(DataBroker):
             raise NotSupportedError()
         for key in keys:
             dpid, suffix_key = self._parse_key(key)
+            if type(dpid) is bytes:
+                dpid = dpid.decode()
             rule_json = self._backend.get(key)
             rule_dict = json.loads(rule_json)
             match_dict = rule_dict.get('match', dict())
@@ -331,8 +334,6 @@ class ForwardingDB(DataBroker):
         -------
         Action
         """
-        if type(dpid) is str:
-            dpid = dpid.encode()
         dst_trie = self._base.get(dpid)
         if not dst_trie:
             return Action()
@@ -392,7 +393,7 @@ class ForwardingTransaction(Transaction):
             if self.db.backend == 'redis':
                 keys = list(self.db._backend.scan_iter(match='{}:{}:{}:*'.format(self.db.ns, self.db.type, dpid)))
             elif self.db.backend == 'local':
-                keys = self._backend.scan_iter(prefix='{}:{}:{}:'.format(self.ns, self.type, dpid))
+                keys = self.db._backend.scan_iter(prefix='{}:{}:{}:'.format(self.db.ns, self.db.type, dpid))
             else:
                 raise NotSupportedError()
             if len(keys) > 0:
@@ -424,6 +425,8 @@ class EndpointDB(DataBroker):
             raise NotSupportedError()
         for key in keys:
             prop_name, suffix_key = self._parse_key(key)
+            if type(prop_name) is bytes:
+                prop_name = prop_name.decode()
             prop_json = self._backend.get(key)
             prop_dict = json.loads(prop_json)
             endpoint = prop_dict.get('endpoint')
@@ -456,15 +459,13 @@ class EndpointDB(DataBroker):
         if property_names is None:
             property_names = self._base.keys()
         for prop_name in property_names:
-            if type(prop_name) is str:
-                prop_name = prop_name.encode()
             prop_trie = self._base.get(prop_name)
             if prop_trie:
                 hash_key = prop_trie.get(endpoint)
                 if hash_key:
                     prop_json = self._lookup(hash_key)
                     prop_dict = json.loads(prop_json)
-                    properties[prop_name.decode()] = prop_dict.get('val')
+                    properties[prop_name] = prop_dict.get('val')
         return properties
 
     def new_transaction(self):

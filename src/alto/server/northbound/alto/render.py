@@ -14,9 +14,6 @@ from alto.common.constants import (ALTO_CONTENT_TYPE_IRD,
                                    ALTO_PARAMETER_TYPE_EPS,
                                    ALTO_PARAMETER_TYPE_PROPMAP)
 
-HEADER_CTYPE = 'Content-Type'
-HEADER_ID = 'Content-ID'
-
 
 class IRDRender(JSONRenderer):
     """
@@ -27,6 +24,34 @@ class IRDRender(JSONRenderer):
 
     def render(self, data, accepted_media_type=None, renderer_context=None):
         return super(IRDRender, self).render(data, accepted_media_type, renderer_context)
+
+
+class EndpointCostRender(JSONRenderer):
+    """
+    Render for Endpoint Cost Service.
+    """
+
+    media_type = ALTO_CONTENT_TYPE_ECS
+
+    def render(self, ecmap, accepted_media_type=None, renderer_context=None):
+        data = dict()
+        data['endpoint-cost-map'] = ecmap
+        return super(EndpointCostRender, self).render(data, accepted_media_type,
+                                                      renderer_context)
+
+
+class EndpointPropRender(JSONRenderer):
+    """
+    Render for Entity Property Map.
+    """
+
+    media_type = ALTO_CONTENT_TYPE_EPS
+
+    def render(self, propmap, accepted_media_type=None, renderer_context=None):
+        data = dict()
+        data['endpoint-properties'] = propmap
+        return super(EntityPropRender, self).render(data, accepted_media_type,
+                                                    renderer_context)
 
 
 class EntityPropRender(JSONRenderer):
@@ -74,8 +99,8 @@ class MultiPartRelatedRender(MultiPartRenderer):
                     to_bytes(val)
                     for val in [
                         "--%s" % self.BOUNDARY,
-                        '{}: {}'.format(HEADER_CTYPE, item.get(HEADER_CTYPE)),
-                        "{}: {}".format(HEADER_ID, item.get(HEADER_ID)),
+                        '{}: {}'.format('Content-Type', item.get('Content-Type')),
+                        "{}: {}".format('Content-ID', item.get('Content-ID')),
                         "",
                         json.dumps(item.get('data')),
                     ]
@@ -92,7 +117,7 @@ class MultiPartRelatedRender(MultiPartRenderer):
         return b"\r\n".join(lines)
 
     def get_context_type(self):
-        return '{media_type}; boundary={boundary}; type={type}; charset={charset};'.format(
+        return '{media_type}; boundary={boundary}; type={type}; charset={charset}'.format(
             media_type=self.media_type,
             boundary=self.BOUNDARY,
             type=self.type,
@@ -110,4 +135,3 @@ class EndpointPropParser(JSONParser):
 
 class EntityPropParser(JSONParser):
     media_type = ALTO_PARAMETER_TYPE_PROPMAP
-

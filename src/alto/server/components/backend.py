@@ -25,6 +25,7 @@
 # - Jensen Zhang <jingxuan.n.zhang@gmail.com>
 # - Kai Gao <emiapwil@gmail.com>
 
+import math
 from urllib.parse import urljoin
 
 from alto.config import Config
@@ -112,27 +113,64 @@ class GeoIPPropertyService:
         self.db = data_broker_manager.get(self.ns, db_type='delegate')
         self.data_source = data_source
 
+    def get_geomap(self, entities):
+        eidmap = dict()
+        for e in entities:
+            domain, entityid = e.split(':', 1)
+            if domain not in ['ipv4', 'ipv6']:
+                continue
+            eidmap[e] = entityid
+        geomap = self.db.lookup(self.data_source, list(eidmap.values()))
+        return {e: geomap[eid] for e, eid in eidmap.items()}
+
     def lookup(self, entities):
         if self.autoreload:
             self.db.build_cache()
 
-        endpoints = dict()
-        for e in entities:
-            domain, entityid = e.split(':', 1)
-            if domain not in endpoints:
-                endpoints[domain] = []
-            endpoints[domain].append(entityid)
-        geomap = dict()
-        for domain in endpoints.keys():
-            geomap[domain] = self.db.lookup(self.data_source, endpoints[domain])
+        geomap = self.get_geomap(entities)
         property_map = dict()
-        for domain in geomap.keys():
-            for entityid, geoinfo in geomap[domain].items():
-                endpoint = '{}:{}'.format(domain, entityid)
-                property_map[endpoint] = dict()
-                property_map[endpoint]['geolocation'] = {"lat": geoinfo[0],
-                                                         "lng": geoinfo[1]}
+        for e in geomap.keys():
+            geoinfo = geomap[e]
+            if not geoinfo:
+                continue
+            property_map[e] = {
+                'geolocation': {'lat': geoinfo[0], 'lng': geoinfo[1]}
+            }
         return property_map
+
+
+class GeoDistanceService(GeoIPPropertyService):
+    """
+    Backend algorithm for geo-distance based endpoint cost service.
+    """
+
+    def get_geo_distance(self, src_loc, dst_loc):
+        lat1, lng1 = map(math.radians, src_loc)
+        lat2, lng2 = map(math.radians, dst_loc)
+        d_lat = lat1 - lat2
+        d_lng = lng1 - lng2
+        d_geo = 6378 * 2 * math.asin(math.sqrt(math.sin(d_lat/2)**2 +
+                                               math.cos(lat1)*math.cos(lat2)*math.sin(d_lng/2)**2))
+        return d_geo
+
+    def lookup(self, srcs, dsts):
+        if self.autoreload:
+            self.db.build_cache()
+
+        costs = dict()
+        endpoints = set(srcs).union(set(dsts))
+        geomap = self.get_geomap(endpoints)
+        for s in srcs:
+            src_loc = geomap.get(s)
+            if not src_loc:
+                continue
+            costs[s] = dict()
+            for d in dsts:
+                dst_loc = geomap.get(d)
+                if not dst_loc:
+                    continue
+                costs[s][d] = self.get_geo_distance(src_loc, dst_loc)
+        return costs
 
 
 class PathVectorService:

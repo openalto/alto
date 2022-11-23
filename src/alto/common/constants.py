@@ -39,11 +39,13 @@ ALTO_PARAMETER_TYPE_PROPMAP = 'application/alto-propmapparams+json'
 
 ALTO_CONTENT_TYPES = {
     "ird": ALTO_CONTENT_TYPE_IRD,
+    "endpoint-cost": ALTO_CONTENT_TYPE_ECS,
     "path-vector": ALTO_CONTENT_TYPE_ECS_PV,
     "entity-prop": ALTO_CONTENT_TYPE_PROPMAP
 }
 
 ALTO_PARAMETER_TYPES = {
+    "endpoint-cost": ALTO_PARAMETER_TYPE_ECS,
     "path-vector": ALTO_PARAMETER_TYPE_ECS,
     "entity-prop": ALTO_PARAMETER_TYPE_PROPMAP
 }

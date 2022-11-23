@@ -22,23 +22,6 @@ class AgentService(Service):
                 logging.info('Restarting the agent service after 10 sec...')
                 time.sleep(10)
 
-def setup_debug_db():
-    from alto.config import Config
-    from alto.server.components.db import data_broker_manager, ForwardingDB, EndpointDB, DelegateDB
-
-    config = Config()
-    for ns, ns_config in config.get_db_config().items():
-        for db_type, db_config in ns_config.items():
-            if db_type == 'forwarding':
-                db = ForwardingDB(namespace=ns, **db_config)
-            elif db_type == 'endpoint':
-                db = EndpointDB(namespace=ns, **db_config)
-            elif db_type == 'delegate':
-                db = DelegateDB(namespace=ns, **db_config)
-            else:
-                db = None
-            if db:
-                data_broker_manager.register(ns, db_type, db)
 
 if __name__ == '__main__':
     import argparse
@@ -115,7 +98,10 @@ if __name__ == '__main__':
         if args.debug:
             logger = logging.getLogger()
             logger.setLevel(logging.DEBUG)
-            setup_debug_db()
+            from alto.config import Config
+            from alto.utils import setup_debug_db
+            config = Config()
+            setup_debug_db(config)
 
         agent = cls(dbinfo, args.agent_name, namespace, **cfg)
         logging.info('Starting %s Agent...' % (args.agent_name))
