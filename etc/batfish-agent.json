@@ -1,0 +1,4 @@
+{
+    "namespace": "default",
+    "agent_class": "alto.agent.cernlg.BatfishAgent"
+}

@@ -77,6 +77,7 @@ required packages:
     $ pip3 install .
     $ pip3 install redis
     $ gunicorn -b 0.0.0.0:8000 --reload --preload --capture-output --error-logfile /tmp/openalto-error.log --access-logfile /tmp/openalto-access.log alto.server.northbound.wsgi -D
+    $ python3 -m alto.agent.manage --pid /tmp start -c etc/batfish.json -D batfish
     $ python3 -m alto.agent.manage --pid /tmp start -c etc/lg-agent.json -D cernlg
     $ python3 -m alto.agent.manage --pid /tmp start -c etc/cric-agent.json -D cric
     $ python3 -m alto.agent.manage --pid /tmp start -c etc/geoip-delegate-agent.json -D geoip
