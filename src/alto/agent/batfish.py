@@ -1,5 +1,4 @@
 import logging
-import pandas as pd
 from pybatfish.client.session import Session
 from pybatfish.datamodel import *
 from pybatfish.datamodel.answer import *
@@ -17,33 +16,25 @@ class BatfishAgent(DataSourceAgent):
     def __init__(self, dbinfo: DBInfo, name: str, namespace='default', **cfg):
         super().__init__(dbinfo, name, namespace)
 
-        self.uri = self.ensure_field(cfg, 'uri')
-        self.router = cfg.get('default_router', None)
-        self.proxies = cfg.get('proxies', None)
         self.refresh_interval = cfg.get('refresh_interval', None)
-        self.listened_routers = cfg.get('listened_routers', set())
-        self.default_router = cfg.get('default_router', None)
 
         logging.info("Loading databases")
         self.db = [ self.request_db(t) for t in ['forwarding', 'endpoint']]
 
-        self.bf = Session(host="alto-batfish-server")
+        self.bf = Session(host="localhost")
 
-        # TODO: initialize snapshot
-        SNAPSHOT_DIR = '../../networks/example'
-        self.bf.init_snapshot(SNAPSHOT_DIR, name='snapshot-2020-01-01', overwrite=True)
-        self.bf.set_network('example_dc')
-        self.bf.set_snapshot('snapshot-2020-01-01')
+        self.bf.init_snapshot('/data/live', name='live', overwrite=True)
         self.bf.q.initIssues().answer()
 
     def update(self):
         fib_trans = self.db[0].new_transaction()
         results = self.bf.q.routes().answer().frame()
-        for row in results:
-            pkt_match = Match("network")
-            action = Action("next_hop")
+        logging.info("RESULTS*****************************************" + str(results))
+        for index in results.index:
+            pkt_match = Match(results["Network"][index])
+            action = Action(results["Next_Hop_IP"][index])
             rule = ForwardingRule(pkt_match, action)
-            fib_trans.add_rule(row["node"], rule)
+            fib_trans.add_rule(results["Node"][index], rule)
         fib_trans.commit()
 
     def run(self):

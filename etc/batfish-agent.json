@@ -1,4 +1,5 @@
 {
     "namespace": "default",
-    "agent_class": "alto.agent.cernlg.BatfishAgent"
+    "agent_class": "alto.agent.batfish.BatfishAgent",
+    "refresh_interval": 300
 }
