@@ -1,3 +1,4 @@
+version: '2.2'
 services:
   gateway:
     image: nginx
@@ -30,6 +31,15 @@ services:
       - ./etc/alto.conf:/opt/alto/etc/alto.conf
     entrypoint: python
     command: ["-m", "alto.agent.manage", "--pid", "/tmp", "start", "-c", "/etc/cric-agent.json", "-D", "cric"]
+    network_mode: "service:alto-frontend"
+  alto-batfish-server-agent:
+    build:
+      context: .
+      dockerfile: docker-batfish/Dockerfile
+    volumes:
+      - ./etc/batfish-data:/data
+      - ./etc/batfish-agent.json:/etc/batfish-agent.json
+      - ./etc/alto.conf:/opt/alto/etc/alto.conf
     network_mode: "service:alto-frontend"
   alto-db:
     image: redis
