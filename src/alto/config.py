@@ -156,3 +156,13 @@ class Config:
         cost_types_json = self.parser.get('server', 'cost_types', fallback=None)
         if cost_types_json:
             return json.loads(cost_types_json.strip())
+
+
+    def get_vcs_zookeeper_host(self):
+        self.parser.read(self.location)
+        return self.parser.get('server.vcs', 'zookeeper_host', fallback=None)
+
+
+    def get_vcs_zookeeper_timeout(self):
+        self.parser.read(self.location)
+        return int(self.parser.get('server.vcs', 'zookeeper_timeout', fallback=15))

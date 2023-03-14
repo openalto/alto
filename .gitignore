@@ -54,3 +54,6 @@ MANIFEST
 .venv*/
 .conda*/
 .python-version
+
+# User local file
+etc/alto.conf
