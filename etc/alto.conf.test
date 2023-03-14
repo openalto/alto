@@ -136,6 +136,12 @@ resources = {
     "params": {
       "data_source": "geoip"}}}
 
+
+[server.vcs]
+# Configuration for version control system
+zookeeper_host = zoo1
+zookeeper_timeout = 15
+
 ####################################################
 # Common configuratoin
 ####################################################

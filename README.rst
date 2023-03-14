@@ -59,6 +59,20 @@ This ALTO toolset includes the following basic components:
 Server Deployment
 =================
 
+Before you set up an OpenALTO server, make sure you have ``alto.conf`` in one of
+the following locations:
+
+* ``$HOME/.alto/``
+* ``$XDG_CONFIG_HOME/alto/``
+* ``$ALTO_HOME/etc/``
+* ``/opt/alto/etc/``
+
+You can simply copy our template as an example, or modify it:
+
+.. code-block:: bash
+
+    $ cp etc/alto.conf.template etc/alto.conf
+
 Quick set up with ``docker`` and ``docker-compose``:
 
 .. code-block:: bash

@@ -33,18 +33,26 @@ ALTO_CONTENT_TYPE_PROPMAP = 'application/alto-propmap+json'
 ALTO_CONTENT_TYPE_CM_PV = 'multipart/related;type={}'.format(ALTO_CONTENT_TYPE_CM)
 ALTO_CONTENT_TYPE_ECS_PV = 'multipart/related;type={}'.format(ALTO_CONTENT_TYPE_ECS)
 
+ALTO_PARAMETER_TYPE_FNM = 'application/alto-networkmapfilter+json'
+ALTO_PARAMETER_TYPE_FCM = 'application/alto-costmapfilter+json'
 ALTO_PARAMETER_TYPE_ECS = 'application/alto-endpointcostparams+json'
 ALTO_PARAMETER_TYPE_EPS = 'application/alto-endpointpropparams+json'
 ALTO_PARAMETER_TYPE_PROPMAP = 'application/alto-propmapparams+json'
 
 ALTO_CONTENT_TYPES = {
     "ird": ALTO_CONTENT_TYPE_IRD,
+    "network-map": ALTO_CONTENT_TYPE_NM,
+    "cost-map": ALTO_CONTENT_TYPE_CM,
     "endpoint-cost": ALTO_CONTENT_TYPE_ECS,
+    "endpoint-prop": ALTO_CONTENT_TYPE_EPS,
     "path-vector": ALTO_CONTENT_TYPE_ECS_PV,
+    "cost-map-pv": ALTO_CONTENT_TYPE_CM_PV,
     "entity-prop": ALTO_CONTENT_TYPE_PROPMAP
 }
 
 ALTO_PARAMETER_TYPES = {
+    "filtered-network-map": ALTO_PARAMETER_TYPE_FNM,
+    "filtered-cost-map": ALTO_PARAMETER_TYPE_FCM,
     "endpoint-cost": ALTO_PARAMETER_TYPE_ECS,
     "path-vector": ALTO_PARAMETER_TYPE_ECS,
     "entity-prop": ALTO_PARAMETER_TYPE_PROPMAP
