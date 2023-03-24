@@ -24,6 +24,9 @@
 # Authors:
 # - Jensen Zhang <jingxuan.n.zhang@gmail.com>
 
+from enum import Enum
+
+
 ALTO_CONTENT_TYPE_IRD = 'application/alto-directory+json'
 ALTO_CONTENT_TYPE_NM = 'application/alto-networkmap+json'
 ALTO_CONTENT_TYPE_CM = 'application/alto-costmap+json'
@@ -57,3 +60,8 @@ ALTO_PARAMETER_TYPES = {
     "path-vector": ALTO_PARAMETER_TYPE_ECS,
     "entity-prop": ALTO_PARAMETER_TYPE_PROPMAP
 }
+
+
+class Diff(Enum):
+    JSON_PATCH = 1
+    JSON_MERGE_PATCH = 2

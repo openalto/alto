@@ -86,3 +86,12 @@ def test_alto_config(*args):
 
     zookeeper_timeout = config.get_vcs_zookeeper_timeout()
     assert zookeeper_timeout == 15
+
+    polling_interval = config.get_vcs_polling_interval()
+    assert polling_interval == 1
+
+    snapshot_freq = config.get_vcs_snapshot_freq()
+    assert snapshot_freq == 3
+
+    init_version = config.get_vcs_init_version()
+    assert init_version == 100

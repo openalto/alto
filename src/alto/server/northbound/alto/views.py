@@ -4,16 +4,20 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .render import (IRDRender,
+                     NetworkMapRender,
+                     CostMapRender,
                      MultiPartRelatedRender,
                      EndpointCostRender,
                      EntityPropRender,
                      EndpointCostParser,
                      EntityPropParser)
 
-from alto.server.components.backend import PathVectorService, IRDService
+from alto.server.components.backend import PathVectorService, IRDService, MockService
 from alto.config import Config
 from alto.utils import load_class, setup_debug_db
 from alto.common.constants import (ALTO_CONTENT_TYPE_IRD,
+                                   ALTO_CONTENT_TYPE_NM,
+                                   ALTO_CONTENT_TYPE_CM,
                                    ALTO_CONTENT_TYPE_ECS,
                                    ALTO_CONTENT_TYPE_PROPMAP)
 
@@ -38,6 +42,38 @@ class IRDView(APIView):
     def get(self, request):
         base_uri = request.build_absolute_uri('/')
         content = self.algorithm.list_resources(self.resource_id, default_base_uri=base_uri)
+        return Response(content, content_type=self.content_type)
+
+
+class NetworkMapView(APIView):
+    """
+    ALTO view for network map.
+    """
+    renderer_classes = [NetworkMapRender]
+
+    algorithm = MockService()
+    resource_id = ''
+    content_type = ALTO_CONTENT_TYPE_NM
+
+    def get(self, request):
+        # TODO: Implement view for network map
+        content = self.algorithm.lookup()
+        return Response(content, content_type=self.content_type)
+
+
+class CostMapView(APIView):
+    """
+    ALTO view for cost map.
+    """
+    renderer_classes = [CostMapRender]
+
+    algorithm = MockService()
+    resource_id = ''
+    content_type = ALTO_CONTENT_TYPE_CM
+
+    def get(self, request):
+        # TODO: Implement view for network map
+        content = self.algorithm.lookup()
         return Response(content, content_type=self.content_type)
 
 
@@ -241,6 +277,12 @@ class PathVectorView(APIView):
 def get_view(resource_type, resource_id, namespace, algorithm=None, params=dict()):
     if resource_type == 'ird':
         view_cls = IRDView
+    elif resource_type == 'network-map':
+        # TODO: Implement view for network map
+        view_cls = NetworkMapView
+    elif resource_type == 'cost-map':
+        # TODO: Implement view for cost map
+        view_cls = CostMapView
     elif resource_type == 'endpoint-cost':
         view_cls = EndpointCostView
     elif resource_type == 'path-vector':

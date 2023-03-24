@@ -73,6 +73,59 @@ class MockGeoIP2(MagicMock):
 mockGeoIP2 = MockGeoIP2()
 
 
+class MockKazoo(MagicMock):
+
+    class KazooClient:
+
+        def __init__(self, **kwargs):
+            self.base = dict()
+
+        def _parse_path(self, path):
+            return path.split('/')[1:]
+
+        def _get_leaf_node(self, node_path):
+            parent = self.base
+            for n in node_path:
+                parent = parent[n]
+            return parent
+
+        def start(self, **kwargs):
+            pass
+
+        def stop(self, **kwargs):
+            pass
+
+        def ensure_path(self, path, **kwargs):
+            nodes = self._parse_path(path)
+            parent = self.base
+            for n in nodes:
+                if n not in parent:
+                    parent[n] = dict()
+                parent = parent[n]
+
+        def create(self, path, data, **kwargs):
+            nodes = self._parse_path(path)
+            parent = self._get_leaf_node(nodes[:-1])
+            parent[nodes[-1]] = data
+
+        def get_children(self, path, **kwargs):
+            nodes = self._parse_path(path)
+            parent = self._get_leaf_node(nodes)
+            return list(parent.keys())
+
+        def get(self, path, **kwargs):
+            nodes = self._parse_path(path)
+            return self._get_leaf_node(nodes), None
+
+        def delete(self, path, **kwargs):
+            nodes = self._parse_path(path)
+            parent = self._get_leaf_node(nodes[:-1])
+            del parent[nodes[-1]]
+
+
+mockKazoo = MockKazoo()
+
+
 TEST_DEFAULT_NM = {
     "meta" : {
         "vtag": {
@@ -184,11 +237,84 @@ Content-ID: <propmap@localhost>
 --d41d8cd98f00b204e9800998ecf8427e--
 """
 
+TEST_DYNAMIC_NM_1 = {
+    "meta" : {
+        "vtag": {
+            "resource-id": "dynamic-networkmap",
+            "tag": "da65eca2eb7a10ce8b059740b0b2e3f8eb1d4785"
+        }
+    },
+    "network-map" : {
+        "PID1" : {
+            "ipv4" : [ "192.0.2.0/24", "198.51.100.0/25" ]
+        },
+        "PID2" : {
+            "ipv4" : [ "198.51.100.128/25" ]
+        },
+        "PID0" : {
+            "ipv4" : [ "0.0.0.0/0" ],
+            "ipv6" : [ "::/0" ]
+        }
+    }
+}
+
+TEST_DYNAMIC_NM_2 = {
+    "meta" : {
+        "vtag": {
+            "resource-id": "dynamic-networkmap",
+            "tag": "8124fa5960796ba5d9295d1bb094563fe77fff03"
+        }
+    },
+    "network-map" : {
+        "PID1" : {
+            "ipv4" : [ "192.0.2.0/24", "198.51.100.0/25" ]
+        },
+        "PID2" : {
+            "ipv4" : [ "198.51.100.128/25" ]
+        },
+        "PID3" : {
+            "ipv4" : [ "192.0.3.0/24" ]
+        },
+        "PID0" : {
+            "ipv4" : [ "0.0.0.0/0" ],
+            "ipv6" : [ "::/0" ]
+        }
+    }
+}
+
+TEST_DYNAMIC_NM_3 = {
+    "meta" : {
+        "vtag": {
+            "resource-id": "dynamic-networkmap",
+            "tag": "dafb9c1b9a78d00ab6896c09b8e350f727fd966c"
+        }
+    },
+    "network-map" : {
+        "PID1" : {
+            "ipv4" : [ "192.0.2.0/24", "198.51.100.0/24" ]
+        },
+        "PID3" : {
+            "ipv4" : [ "192.0.3.0/24" ]
+        },
+        "PID0" : {
+            "ipv4" : [ "0.0.0.0/0" ],
+            "ipv6" : [ "::/0" ]
+        }
+    }
+}
+
 MOCK = [
     {
         'uri': 'http://localhost:8181/alto/networkmap/default-networkmap',
         'headers': {'content-type': ALTO_CTYPE_NM},
         'json': TEST_DEFAULT_NM,
+        'status_code': 200
+    },
+    {
+        'uri': 'https://alto.example.com/networkmap/dynamic-networkmap',
+        'headers': {'content-type': ALTO_CTYPE_NM},
+        'json_alt': [TEST_DYNAMIC_NM_1, TEST_DYNAMIC_NM_2, TEST_DYNAMIC_NM_3],
+        'index': 0,
         'status_code': 200
     },
     {
@@ -231,6 +357,7 @@ def mocked_requests_get(uri, *args, **kwars):
             self.json_data = json_data
             self.status_code = status_code
             self.text = text_data or json.dumps(self.json())
+            self.content = self.text.encode()
 
         def raise_for_status(self):
             pass
@@ -240,8 +367,20 @@ def mocked_requests_get(uri, *args, **kwars):
 
     for mock_item in MOCK:
         if uri == mock_item.get('uri'):
+            json_data = mock_item.get('json')
+            if 'json_alt' in mock_item:
+                json_alt = mock_item.get('json_alt')
+                if 'index' not in mock_item:
+                    mock_item['index'] = 0
+                json_idx = mock_item['index'] % len(json_alt)
+                json_data = json_alt[json_idx]
+                mock_item['index'] = json_idx + 1
             return MockResponse(headers=mock_item.get('headers'),
-                                json_data=mock_item.get('json'),
+                                json_data=json_data,
                                 text_data=mock_item.get('text'),
                                 status_code=mock_item.get('status_code'))
+
+
+def mocked_requests_request(method, uri, *args, **kwargs):
+    return mocked_requests_get(uri)
 

@@ -34,6 +34,18 @@ from alto.common.constants import ALTO_CONTENT_TYPES, ALTO_PARAMETER_TYPES
 from .db import data_broker_manager
 
 
+class MockService:
+    """
+    Mock backend algorithm for test purpose.
+    """
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def lookup(self, *args, **kwargs):
+        return dict()
+
+
 class IRDService:
     """
     Backend algorithm for IRD generation.

@@ -158,6 +158,9 @@ class Config:
             return json.loads(cost_types_json.strip())
 
 
+    ####################################
+    # ALTO server version control config
+    ####################################
     def get_vcs_zookeeper_host(self):
         self.parser.read(self.location)
         return self.parser.get('server.vcs', 'zookeeper_host', fallback=None)
@@ -166,3 +169,18 @@ class Config:
     def get_vcs_zookeeper_timeout(self):
         self.parser.read(self.location)
         return int(self.parser.get('server.vcs', 'zookeeper_timeout', fallback=15))
+
+
+    def get_vcs_polling_interval(self):
+        self.parser.read(self.location)
+        return int(self.parser.get('server.vcs', 'polling_interval', fallback=5))
+
+
+    def get_vcs_snapshot_freq(self):
+        self.parser.read(self.location)
+        return int(self.parser.get('server.vcs', 'snapshot_freq', fallback=5))
+
+
+    def get_vcs_init_version(self):
+        self.parser.read(self.location)
+        return int(self.parser.get('server.vcs', 'init_version', fallback=1))
