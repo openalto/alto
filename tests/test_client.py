@@ -40,6 +40,7 @@ def test_client_noimpl():
     """ALTO Client Tests"""
     ac = Client(config=False, default_ird="http://mockird", auth=('admin', 'admin'))
     with pytest.raises(NotImplementedError):
+        # FIXME: once implement get_ird() method, remove this test
         ac.get_ird()
 
 

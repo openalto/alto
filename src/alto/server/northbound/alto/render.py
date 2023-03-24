@@ -7,6 +7,8 @@ from rest_framework.parsers import JSONParser
 from rest_framework.renderers import JSONRenderer, MultiPartRenderer
 
 from alto.common.constants import (ALTO_CONTENT_TYPE_IRD,
+                                   ALTO_CONTENT_TYPE_NM,
+                                   ALTO_CONTENT_TYPE_CM,
                                    ALTO_CONTENT_TYPE_ECS,
                                    ALTO_CONTENT_TYPE_EPS,
                                    ALTO_CONTENT_TYPE_PROPMAP,
@@ -24,6 +26,28 @@ class IRDRender(JSONRenderer):
 
     def render(self, data, accepted_media_type=None, renderer_context=None):
         return super(IRDRender, self).render(data, accepted_media_type, renderer_context)
+
+
+class NetworkMapRender(JSONRenderer):
+    """
+    Render for Network Map.
+    """
+
+    media_type = ALTO_CONTENT_TYPE_NM
+
+    def render(self, data, accepted_media_type=None, renderer_context=None):
+        return super(NetworkMapRender, self).render(data, accepted_media_type, renderer_context)
+
+
+class CostMapRender(JSONRenderer):
+    """
+    Render for Cost Map.
+    """
+
+    media_type = ALTO_CONTENT_TYPE_CM
+
+    def render(self, data, accepted_media_type=None, renderer_context=None):
+        return super(CostMapRender, self).render(data, accepted_media_type, renderer_context)
 
 
 class EndpointCostRender(JSONRenderer):
