@@ -56,6 +56,12 @@ class VersionControl:
         self.zk.ensure_path('/alto')
         self.subscribers = dict()
 
+
+    def __new__(cls):
+        if not hasattr(cls, 'instance'):
+            cls.instance = super(VersionControl, cls).__new__(cls)
+        return cls.instance
+
     
     def __del__(self):
         self.stop()
@@ -136,18 +142,23 @@ class VersionControl:
         digest : str
             The digest token of a subscribed update listenser.
         """
-        path = '/alto/{}/{}'.format(resource_id, digest)
-        path_subscriber = '{}/subscriber'.format(path)
-        self.zk.delete('{}/{}'.format(path_subscriber, client_id))
+        try:
+            path = '/alto/{}/{}'.format(resource_id, digest)
+            path_subscriber = '{}/subscriber'.format(path)
+            self.zk.delete('{}/{}'.format(path_subscriber, client_id))
 
-        # if all the clients have unsubscribed the resource, remove listener
-        active_subscribers = self.zk.get_children(path_subscriber)
-        if not active_subscribers:
-            listener = self.subscribers[(resource_id, digest)]
-            listener.stop()
-            listener.join()
-            del self.subscribers[(resource_id, digest)]
-            self.zk.delete('/alto/{}/{}'.format(resource_id, digest), recursive=True)
+            # if all the clients have unsubscribed the resource, remove listener
+            active_subscribers = self.zk.get_children(path_subscriber)
+            if not active_subscribers:
+                listener = self.subscribers[(resource_id, digest)]
+                listener.stop()
+                listener.join()
+                del self.subscribers[(resource_id, digest)]
+                self.zk.delete('/alto/{}/{}'.format(resource_id, digest), recursive=True)
+        except Exception:
+            return False
+
+        return True
 
 
     def get_tips_view(self, resource_id, digest):

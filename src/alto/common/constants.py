@@ -27,6 +27,8 @@
 from enum import Enum
 
 
+ALTO_CONTENT_TYPE_ERROR = 'application/alto-error+json'
+
 ALTO_CONTENT_TYPE_IRD = 'application/alto-directory+json'
 ALTO_CONTENT_TYPE_NM = 'application/alto-networkmap+json'
 ALTO_CONTENT_TYPE_CM = 'application/alto-costmap+json'
@@ -35,12 +37,15 @@ ALTO_CONTENT_TYPE_EPS = 'application/alto-endpointprop+json'
 ALTO_CONTENT_TYPE_PROPMAP = 'application/alto-propmap+json'
 ALTO_CONTENT_TYPE_CM_PV = 'multipart/related;type={}'.format(ALTO_CONTENT_TYPE_CM)
 ALTO_CONTENT_TYPE_ECS_PV = 'multipart/related;type={}'.format(ALTO_CONTENT_TYPE_ECS)
+ALTO_CONTENT_TYPE_TIPS = 'application/alto-tips+json'
+ALTO_CONTENT_TYPE_TIPS_VIEW = 'application/alto-tipsview+json'
 
 ALTO_PARAMETER_TYPE_FNM = 'application/alto-networkmapfilter+json'
 ALTO_PARAMETER_TYPE_FCM = 'application/alto-costmapfilter+json'
 ALTO_PARAMETER_TYPE_ECS = 'application/alto-endpointcostparams+json'
 ALTO_PARAMETER_TYPE_EPS = 'application/alto-endpointpropparams+json'
 ALTO_PARAMETER_TYPE_PROPMAP = 'application/alto-propmapparams+json'
+ALTO_PARAMETER_TYPE_TIPS = 'application/alto-tipsparams+json'
 
 ALTO_CONTENT_TYPES = {
     "ird": ALTO_CONTENT_TYPE_IRD,
@@ -50,7 +55,8 @@ ALTO_CONTENT_TYPES = {
     "endpoint-prop": ALTO_CONTENT_TYPE_EPS,
     "path-vector": ALTO_CONTENT_TYPE_ECS_PV,
     "cost-map-pv": ALTO_CONTENT_TYPE_CM_PV,
-    "entity-prop": ALTO_CONTENT_TYPE_PROPMAP
+    "entity-prop": ALTO_CONTENT_TYPE_PROPMAP,
+    "tips": ALTO_CONTENT_TYPE_TIPS
 }
 
 ALTO_PARAMETER_TYPES = {
@@ -58,10 +64,20 @@ ALTO_PARAMETER_TYPES = {
     "filtered-cost-map": ALTO_PARAMETER_TYPE_FCM,
     "endpoint-cost": ALTO_PARAMETER_TYPE_ECS,
     "path-vector": ALTO_PARAMETER_TYPE_ECS,
-    "entity-prop": ALTO_PARAMETER_TYPE_PROPMAP
+    "entity-prop": ALTO_PARAMETER_TYPE_PROPMAP,
+    "tips": ALTO_PARAMETER_TYPE_TIPS
 }
 
 
 class Diff(Enum):
     JSON_PATCH = 1
     JSON_MERGE_PATCH = 2
+
+
+def get_diff_format(media_type):
+    diff_format = Diff.JSON_MERGE_PATCH
+    if media_type == 'application/json-patch+json':
+        diff_format = Diff.JSON_PATCH
+    elif media_type == 'application/merge-patch+json':
+        diff_format = Diff.JSON_MERGE_PATCH
+    return diff_format

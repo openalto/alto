@@ -48,7 +48,7 @@ from alto.common.constants import (ALTO_CONTENT_TYPE_IRD,
                                    ALTO_CONTENT_TYPE_PROPMAP,
                                    ALTO_PARAMETER_TYPE_ECS,
                                    ALTO_PARAMETER_TYPE_PROPMAP)
-from alto.mock import mockGeoIP2
+from alto.mock import mockGeoIP2, mockKazoo
 
 __author__ = "OpenALTO"
 __copyright__ = "OpenALTO"
@@ -114,7 +114,8 @@ class ALTONorthboundTest(TestCase):
         #                            AS10000
         # h1 (10.1.0.2) - s1 (10.0.0.1) - (10.0.0.2) s2 - AS10086 - AS10010 - h2 (10.2.0.2)
         mock.patch.dict('sys.modules', {'geoip2.database': mockGeoIP2,
-                                        'geoip2.webservice': mockGeoIP2}).start()
+                                        'geoip2.webservice': mockGeoIP2,
+                                        'kazoo.client': mockKazoo}).start()
 
         fib = data_broker_manager.get('default', db_type='forwarding')
         eb = data_broker_manager.get('default', db_type='endpoint')
