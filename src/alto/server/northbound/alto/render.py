@@ -12,11 +12,16 @@ from alto.common.constants import (ALTO_CONTENT_TYPE_IRD,
                                    ALTO_CONTENT_TYPE_ECS,
                                    ALTO_CONTENT_TYPE_EPS,
                                    ALTO_CONTENT_TYPE_PROPMAP,
+                                   ALTO_CONTENT_TYPE_TIPS,
                                    ALTO_PARAMETER_TYPE_ECS,
                                    ALTO_PARAMETER_TYPE_EPS,
-                                   ALTO_PARAMETER_TYPE_PROPMAP)
+                                   ALTO_PARAMETER_TYPE_PROPMAP,
+                                   ALTO_PARAMETER_TYPE_TIPS)
 
 
+################################
+# Renders for ALTO related views
+################################
 class IRDRender(JSONRenderer):
     """
     Render for Information Resource Directory.
@@ -149,6 +154,21 @@ class MultiPartRelatedRender(MultiPartRenderer):
         )
 
 
+class TIPSRender(JSONRenderer):
+    """
+    Render for ALTO Transport Information Publication Service (TIPS).
+    """
+
+    media_type = ALTO_CONTENT_TYPE_TIPS
+
+    def render(self, data, accepted_media_type=None, renderer_context=None):
+        return super(TIPSRender, self).render(data, accepted_media_type,
+                                                    renderer_context)
+
+
+###################################
+# Parsers for ALTO related requests
+###################################
 class EndpointCostParser(JSONParser):
     media_type = ALTO_PARAMETER_TYPE_ECS
 
@@ -159,3 +179,7 @@ class EndpointPropParser(JSONParser):
 
 class EntityPropParser(JSONParser):
     media_type = ALTO_PARAMETER_TYPE_PROPMAP
+
+
+class TIPSParser(JSONParser):
+    media_type = ALTO_PARAMETER_TYPE_TIPS

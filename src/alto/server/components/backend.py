@@ -26,12 +26,20 @@
 # - Kai Gao <emiapwil@gmail.com>
 
 import math
+import hashlib
+import json
 from urllib.parse import urljoin
 
 from alto.config import Config
-from alto.common.constants import ALTO_CONTENT_TYPES, ALTO_PARAMETER_TYPES
+from alto.common.constants import ALTO_CONTENT_TYPES, ALTO_PARAMETER_TYPES, get_diff_format
+from alto.mock import (TEST_DYNAMIC_NM_1,
+                       TEST_DYNAMIC_NM_2,
+                       TEST_DYNAMIC_NM_3,
+                       TEST_DYNAMIC_NM_4,
+                       TEST_DYNAMIC_NM_5)
 
 from .db import data_broker_manager
+from .vcs import vcs_singleton
 
 
 class MockService:
@@ -40,10 +48,14 @@ class MockService:
     """
 
     def __init__(self, *args, **kwargs):
-        pass
+        self.count = 0
+        self.maps = [TEST_DYNAMIC_NM_1, TEST_DYNAMIC_NM_2, TEST_DYNAMIC_NM_3,
+                     TEST_DYNAMIC_NM_4, TEST_DYNAMIC_NM_5]
 
     def lookup(self, *args, **kwargs):
-        return dict()
+        idx = self.count
+        self.count = (self.count + 1) % len(self.maps)
+        return self.maps[idx]
 
 
 class IRDService:
@@ -307,3 +319,123 @@ class PathVectorService:
 
         return paths, property_map
 
+
+class TIPSControlService:
+    """
+    Backend algorithm for TIPS.
+    """
+
+    def __init__(self, namespace, tips_resource_id='', **kwargs) -> None:
+        self.ns = namespace
+        self.vcs = vcs_singleton
+        self.tips_resource_id = tips_resource_id
+        self.config = Config()
+
+    def subscribe(self, post_data, client_id='public'):
+        resource_id = post_data.get('resource-id')
+        request_body = post_data.get('input')
+        diff_format = self.get_diff_format(resource_id)
+        if diff_format is None:
+            return
+        digest = self.vcs.subscribe(resource_id, request_body=request_body,
+                                    client_id=client_id, diff_format=diff_format)
+        tips_view = dict()
+        # FIXME: the path root '/tips' SHOULD NOT be hardcoded
+        tips_view['tips-view-uri'] = '/tips/{}/{}'.format(resource_id, digest)
+        tips_view_summary = dict()
+        updates_graph = self.vcs.get_tips_view(resource_id, digest)
+        seqs = set()
+        for start_seq in updates_graph:
+            if start_seq != '0':
+                seqs.add(int(start_seq))
+            for end_seq in updates_graph[start_seq]:
+                seqs.add(int(end_seq))
+        tips_view_summary['updates-graph-summary'] = {
+            'start-seq': min(seqs),
+            'end-seq': max(seqs),
+            'start-edge-rec': {
+                'seq-i': 0,
+                'seq-j': int(updates_graph['0'][-1])
+            }
+        }
+
+        # FIXME: get `support-server-push` from capabilities of the IRD entry
+        tips_view_summary['server-push'] = False
+        tips_view['tips-view-summary'] = tips_view_summary
+        return tips_view
+
+    def unsubscribe(self, resource_id, digest, client_id='public'):
+        return self.vcs.unsubscribe(resource_id, digest, client_id=client_id)
+
+    def get_tips_view(self, resource_id, digest, ug_only=False, start_seq=None, end_seq=None):
+        # TODO: check if the client has already subscribed the resource; if not, return Unauthorized error
+        ug = self.vcs.get_tips_view(resource_id, digest)
+        view = dict()
+        tag = hashlib.sha1(json.dumps(ug, sort_keys=True).encode()).hexdigest()
+        if not ug_only:
+            view['meta'] = {'resource-id': digest, 'tag': tag}
+            # TODO: support server push later
+            view['push-state'] = {'server-push': False, 'next-edge': None}
+        updates_graph = dict()
+        if start_seq is not None and end_seq is not None:
+            start_seq = str(start_seq)
+            end_seq = str(end_seq)
+            edge_view = self.get_tips_edge_view(resource_id, digest, start_seq, end_seq)
+            if edge_view is None:
+                return
+            updates_graph = {start_seq: {end_seq: edge_view}}
+        else:
+            for start_seq in ug:
+                updates_graph[start_seq] = dict()
+                for end_seq in ug[start_seq]:
+                    edge_view = self.get_tips_edge_view(resource_id, digest, start_seq, end_seq)
+                    if edge_view is not None:
+                        updates_graph[start_seq][end_seq] = edge_view
+
+        view['updates-graph'] = updates_graph
+
+        return view
+
+    def get_tips_edge_view(self, resource_id, digest, start_seq, end_seq):
+        data = self.vcs.get_tips_data(resource_id, digest, start_seq, end_seq)
+        edge_view = None
+        if data is not None:
+            edge_view = {
+                'media-type': self.get_media_type(resource_id, patch=(start_seq != '0')),
+                'tag': hashlib.sha1(data).hexdigest(),
+                'size': len(data)
+            }
+        return edge_view
+
+    def get_tips_data(self, resource_id, digest, start_seq, end_seq):
+        start_seq = str(start_seq)
+        end_seq = str(end_seq)
+        data = self.vcs.get_tips_data(resource_id, digest, start_seq, end_seq)
+        if data is None:
+            return None, None
+        media_type = self.get_media_type(resource_id, patch=(start_seq != '0'))
+        return json.loads(data), media_type
+
+    def get_configured_resources(self):
+        return self.config.get_configured_resources()
+
+    def get_diff_format(self, resource_id, resources=None):
+        media_type = self.get_diff_media_type(resource_id, resources=resources)
+        return get_diff_format(media_type)
+
+    def get_diff_media_type(self, resource_id, resources=None):
+        if resources is None:
+            resources = self.get_configured_resources()
+        resource_config = resources.get(self.tips_resource_id)
+        if resource_config is None:
+            return
+        capability = resource_config.get('capabilities', dict())
+        diff_format_dict = capability.get('incremental-change-media-types', dict())
+        return diff_format_dict.get(resource_id)
+
+    def get_media_type(self, resource_id, patch=False):
+        resources = self.get_configured_resources()
+        if patch:
+            return self.get_diff_media_type(resource_id, resources=resources)
+        resource_config = resources.get(resource_id)
+        return ALTO_CONTENT_TYPES.get(resource_config['type'])

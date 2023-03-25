@@ -9,16 +9,24 @@ from .render import (IRDRender,
                      MultiPartRelatedRender,
                      EndpointCostRender,
                      EntityPropRender,
+                     TIPSRender,
                      EndpointCostParser,
-                     EntityPropParser)
+                     EntityPropParser,
+                     TIPSParser)
 
-from alto.server.components.backend import PathVectorService, IRDService, MockService
+from alto.server.components.backend import (IRDService,
+                                            PathVectorService,
+                                            TIPSControlService,
+                                            MockService)
 from alto.config import Config
 from alto.utils import load_class, setup_debug_db
-from alto.common.constants import (ALTO_CONTENT_TYPE_IRD,
+from alto.common.constants import (ALTO_CONTENT_TYPE_ERROR,
+                                   ALTO_CONTENT_TYPE_IRD,
                                    ALTO_CONTENT_TYPE_NM,
                                    ALTO_CONTENT_TYPE_CM,
                                    ALTO_CONTENT_TYPE_ECS,
+                                   ALTO_CONTENT_TYPE_TIPS,
+                                   ALTO_CONTENT_TYPE_TIPS_VIEW,
                                    ALTO_CONTENT_TYPE_PROPMAP)
 
 
@@ -274,6 +282,69 @@ class PathVectorView(APIView):
         return Response(content, content_type=content_type)
 
 
+class TIPSView(APIView):
+    """
+    ALTO view for Transport Information Publication Service (TIPS).
+    """
+    renderer_classes = [TIPSRender]
+    parser_classes = [TIPSParser]
+
+    algorithm = TIPSControlService(config.get_default_namespace())
+    resource_id = ''
+    content_type = ALTO_CONTENT_TYPE_TIPS
+
+    def post(self, request):
+        post_data = dict(request.data)
+        client_id = 'public'
+        if request.user.is_authenticated:
+            client_id = request.user.get_username()
+        content = self.algorithm.subscribe(post_data, client_id=client_id)
+        return Response(content, content_type=self.content_type)
+
+
+class TIPSMetadataView(APIView):
+    """
+    ALTO view for TIPS view metadata directory service.
+    """
+    renderer_classes = [TIPSRender]
+
+    algorithm = TIPSControlService(config.get_default_namespace())
+    resource_id = ''
+    content_type = ALTO_CONTENT_TYPE_TIPS_VIEW
+
+    def get(self, request, resource_id=None, digest=None, ug_meta=False, start_seq=None, end_seq=None):
+        content = self.algorithm.get_tips_view(resource_id, digest, ug_meta, start_seq, end_seq)
+        if content is None:
+            return Response(dict(), status=404, content_type=ALTO_CONTENT_TYPE_ERROR)
+        return Response(content, content_type=self.content_type)
+
+    def delete(self, request, resource_id=None, digest=None):
+        client_id = 'public'
+        if request.user.is_authenticated:
+            client_id = request.user.get_username()
+        success = self.algorithm.unsubscribe(resource_id, digest, client_id=client_id)
+        if not success:
+            return Response(dict(), status=404, content_type=ALTO_CONTENT_TYPE_ERROR)
+        return Response(content_type=self.content_type)
+
+
+class TIPSDataTransferView(APIView):
+    """
+    ALTO view for TIPS data transfer service.
+    """
+    renderer_classes = [TIPSRender]
+
+    algorithm = TIPSControlService(config.get_default_namespace())
+    resource_id = ''
+    content_type = ALTO_CONTENT_TYPE_TIPS
+
+    def get(self, request, resource_id=None, digest=None, start_seq=None, end_seq=None):
+        content, media_type = self.algorithm.get_tips_data(resource_id, digest, start_seq, end_seq)
+        if content is None:
+            return Response(dict(), status=404, content_type=ALTO_CONTENT_TYPE_ERROR)
+        return Response(content, content_type=media_type)
+
+
 def get_view(resource_type, resource_id, namespace, algorithm=None, params=dict()):
     if resource_type == 'ird':
         view_cls = IRDView
@@ -289,6 +360,15 @@ def get_view(resource_type, resource_id, namespace, algorithm=None, params=dict(
         view_cls = PathVectorView
     elif resource_type == 'entity-prop':
         view_cls = EntityPropertyView
+    elif resource_type == 'tips':
+        view_cls = TIPSView
+        params['tips_resource_id'] = resource_id
+    elif resource_type == 'tips-view':
+        view_cls = TIPSMetadataView
+        params['tips_resource_id'] = resource_id
+    elif resource_type == 'tips-data':
+        view_cls = TIPSDataTransferView
+        params['tips_resource_id'] = resource_id
     else:
         return
     if algorithm:

@@ -19,6 +19,17 @@ def generate_northbound_routes():
         view = views.get_view(resource_config.get('type'), resource_id, namespace, algorithm, params)
         if view:
             urlpatterns.append(path('{}/{}'.format(base_path, resource_id), view, name=resource_id))
+        if resource_config.get('type') == 'tips':
+            tips_metadata_view = views.get_view('tips-view', resource_id, namespace, algorithm, params)
+            urlpatterns.append(path('tips/<resource_id>/<digest>/meta', tips_metadata_view,
+                                    name='{}:metadata-summary'.format(resource_id)))
+            urlpatterns.append(path('tips/<resource_id>/<digest>/meta/ug', tips_metadata_view,
+                                    {'ug_only': True}, name='{}:metadata-ug'.format(resource_id)))
+            urlpatterns.append(path('tips/<resource_id>/<digest>/meta/ug/<int:start_seq>/<int:end_seq>',
+                                    tips_metadata_view, {'ug_only': True}, name='{}:metadata-edge'.format(resource_id)))
+            tips_data_view = views.get_view('tips-data', resource_id, namespace, algorithm, params)
+            urlpatterns.append(path('tips/<resource_id>/<digest>/ug/<int:start_seq>/<int:end_seq>',
+                                    tips_data_view, name='{}:metadata'.format(resource_id)))
     return urlpatterns
 
 

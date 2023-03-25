@@ -56,6 +56,12 @@ class VersionControl:
         self.zk.ensure_path('/alto')
         self.subscribers = dict()
 
+
+    def __new__(cls):
+        if not hasattr(cls, 'instance'):
+            cls.instance = super(VersionControl, cls).__new__(cls)
+        return cls.instance
+
     
     def __del__(self):
         self.stop()
@@ -136,18 +142,23 @@ class VersionControl:
         digest : str
             The digest token of a subscribed update listenser.
         """
-        path = '/alto/{}/{}'.format(resource_id, digest)
-        path_subscriber = '{}/subscriber'.format(path)
-        self.zk.delete('{}/{}'.format(path_subscriber, client_id))
+        try:
+            path = '/alto/{}/{}'.format(resource_id, digest)
+            path_subscriber = '{}/subscriber'.format(path)
+            self.zk.delete('{}/{}'.format(path_subscriber, client_id))
 
-        # if all the clients have unsubscribed the resource, remove listener
-        active_subscribers = self.zk.get_children(path_subscriber)
-        if not active_subscribers:
-            listener = self.subscribers[(resource_id, digest)]
-            listener.stop()
-            listener.join()
-            del self.subscribers[(resource_id, digest)]
-            self.zk.delete('/alto/{}/{}'.format(resource_id, digest), recursive=True)
+            # if all the clients have unsubscribed the resource, remove listener
+            active_subscribers = self.zk.get_children(path_subscriber)
+            if not active_subscribers:
+                listener = self.subscribers[(resource_id, digest)]
+                listener.stop()
+                listener.join()
+                self.zk.delete('/alto/{}/{}'.format(resource_id, digest), recursive=True)
+                del self.subscribers[(resource_id, digest)]
+        except Exception:
+            return False
+
+        return True
 
 
     def get_tips_view(self, resource_id, digest):
@@ -181,6 +192,9 @@ class VersionControl:
         except Exception:
             return None
         return data
+
+
+vcs_singleton = VersionControl()
 
 
 def get_resource(ctx: VersionControl, resource_id, resource, request_body=None):
@@ -259,7 +273,6 @@ class ResourceListener(Thread):
     def __init__(self, ctx: VersionControl, path, resource_id, resource,
                  request_body=None, polling_interval=1, snapshot_freq=3,
                  init_ver=1, diff_format: Diff=Diff.JSON_MERGE_PATCH) -> None:
-        super().__init__()
         self.ctx = ctx
         self.path = path
         self.resource_id = resource_id
@@ -270,6 +283,7 @@ class ResourceListener(Thread):
         self.snapshot_freq = snapshot_freq
         self.diff_format = diff_format
         self.success = self.initialize(init_ver)
+        super().__init__()
 
 
     def initialize(self, init_ver):
@@ -279,12 +293,15 @@ class ResourceListener(Thread):
         self.ctx.zk.ensure_path('{}/ug/0'.format(self.path))
         self.ctx.zk.create('{}/ug/0/{}'.format(self.path, init_ver), raw_last_res)
         self.last_res = json.loads(raw_last_res)
+        self.init_ver = init_ver
         self.last_ver = init_ver
         return True
 
     
     def run(self):
+        self.ctx.zk.ensure_path('{}/ug/0'.format(self.path))
         while not self.stop_event.is_set():
+            time.sleep(self.polling_interval)
             raw_res = get_resource(self.ctx, self.resource_id, self.resource, self.request_body)
             if raw_res is None:
                 continue
@@ -297,10 +314,8 @@ class ResourceListener(Thread):
                 self.ctx.zk.create('{}/ug/{}/{}'.format(self.path, self.last_ver, new_ver),
                                    json.dumps(patch).encode())
                 self.last_ver = new_ver
-                if self.last_ver % self.snapshot_freq == 0:
+                if (self.last_ver - self.init_ver) % self.snapshot_freq == 0:
                     self.ctx.zk.create('{}/ug/0/{}'.format(self.path, self.last_ver), raw_res)
-
-            time.sleep(self.polling_interval)
 
 
     def create_patch(self, old, new):

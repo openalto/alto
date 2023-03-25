@@ -113,6 +113,18 @@ resources = {
     "algorithm": "alto.server.components.backend.MockService",
     "params": {}
   },
+  "updates-graph": {
+    "type": "tips",
+    "path": "tips-control",
+    "namespace": "default",
+    "algorithm": "alto.server.components.backend.TIPSControlService",
+    "capabilities": {
+      "incremental-change-media-types": {
+        "dynamic-networkmap": "application/merge-patch+json"
+      }
+    },
+    "params": {}
+  },
   "pv": {
     "type": "path-vector",
     "path": "pathvector",

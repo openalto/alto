@@ -71,6 +71,9 @@ class ALTOVersionControlTest(TestCase):
         digest3 = self.vcs.subscribe(resource_id, client_id='client3', diff_format=Diff.JSON_PATCH)
         self.assertNotEqual(digest, digest3, 'Different diff patch formats MUST have different digests')
 
+        self.vcs.show_tips_view(resource_id, digest)
+        self.vcs.show_tips_view(resource_id, digest3)
+
         time.sleep(5)
 
         # Full Replacement Test
