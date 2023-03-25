@@ -153,8 +153,8 @@ class VersionControl:
                 listener = self.subscribers[(resource_id, digest)]
                 listener.stop()
                 listener.join()
-                del self.subscribers[(resource_id, digest)]
                 self.zk.delete('/alto/{}/{}'.format(resource_id, digest), recursive=True)
+                del self.subscribers[(resource_id, digest)]
         except Exception:
             return False
 
@@ -192,6 +192,9 @@ class VersionControl:
         except Exception:
             return None
         return data
+
+
+vcs_singleton = VersionControl()
 
 
 def get_resource(ctx: VersionControl, resource_id, resource, request_body=None):
@@ -270,7 +273,6 @@ class ResourceListener(Thread):
     def __init__(self, ctx: VersionControl, path, resource_id, resource,
                  request_body=None, polling_interval=1, snapshot_freq=3,
                  init_ver=1, diff_format: Diff=Diff.JSON_MERGE_PATCH) -> None:
-        super().__init__()
         self.ctx = ctx
         self.path = path
         self.resource_id = resource_id
@@ -281,6 +283,7 @@ class ResourceListener(Thread):
         self.snapshot_freq = snapshot_freq
         self.diff_format = diff_format
         self.success = self.initialize(init_ver)
+        super().__init__()
 
 
     def initialize(self, init_ver):
@@ -290,12 +293,15 @@ class ResourceListener(Thread):
         self.ctx.zk.ensure_path('{}/ug/0'.format(self.path))
         self.ctx.zk.create('{}/ug/0/{}'.format(self.path, init_ver), raw_last_res)
         self.last_res = json.loads(raw_last_res)
+        self.init_ver = init_ver
         self.last_ver = init_ver
         return True
 
     
     def run(self):
+        self.ctx.zk.ensure_path('{}/ug/0'.format(self.path))
         while not self.stop_event.is_set():
+            time.sleep(self.polling_interval)
             raw_res = get_resource(self.ctx, self.resource_id, self.resource, self.request_body)
             if raw_res is None:
                 continue
@@ -308,10 +314,8 @@ class ResourceListener(Thread):
                 self.ctx.zk.create('{}/ug/{}/{}'.format(self.path, self.last_ver, new_ver),
                                    json.dumps(patch).encode())
                 self.last_ver = new_ver
-                if self.last_ver % self.snapshot_freq == 0:
+                if (self.last_ver - self.init_ver) % self.snapshot_freq == 0:
                     self.ctx.zk.create('{}/ug/0/{}'.format(self.path, self.last_ver), raw_res)
-
-            time.sleep(self.polling_interval)
 
 
     def create_patch(self, old, new):

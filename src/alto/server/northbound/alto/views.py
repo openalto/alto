@@ -339,7 +339,7 @@ class TIPSDataTransferView(APIView):
     content_type = ALTO_CONTENT_TYPE_TIPS
 
     def get(self, request, resource_id=None, digest=None, start_seq=None, end_seq=None):
-        content, media_type = self.algorithm.get_tips_data(request, resource_id, digest, start_seq, end_seq)
+        content, media_type = self.algorithm.get_tips_data(resource_id, digest, start_seq, end_seq)
         if content is None:
             return Response(dict(), status=404, content_type=ALTO_CONTENT_TYPE_ERROR)
         return Response(content, content_type=media_type)

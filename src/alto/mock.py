@@ -303,6 +303,54 @@ TEST_DYNAMIC_NM_3 = {
     }
 }
 
+TEST_DYNAMIC_NM_4 = {
+    "meta" : {
+        "vtag": {
+            "resource-id": "dynamic-networkmap",
+            "tag": "dafb9c1b9a78d00ab6896c09b8e350f727fd966c"
+        }
+    },
+    "network-map" : {
+        "PID1" : {
+            "ipv4" : [ "192.0.2.0/24", "198.51.100.0/24" ]
+        },
+        "PID2" : {
+            "ipv4" : [ "198.51.101.0/25" ]
+        },
+        "PID3" : {
+            "ipv4" : [ "192.0.3.0/24", "198.51.101.128/25" ]
+        },
+        "PID0" : {
+            "ipv4" : [ "0.0.0.0/0" ],
+            "ipv6" : [ "::/0" ]
+        }
+    }
+}
+
+TEST_DYNAMIC_NM_5 = {
+    "meta" : {
+        "vtag": {
+            "resource-id": "dynamic-networkmap",
+            "tag": "dafb9c1b9a78d00ab6896c09b8e350f727fd966c"
+        }
+    },
+    "network-map" : {
+        "PID1" : {
+            "ipv4" : [ "192.0.2.0/24", "198.51.100.0/24" ]
+        },
+        "PID2" : {
+            "ipv4" : [ "198.51.101.0/24" ]
+        },
+        "PID3" : {
+            "ipv4" : [ "192.0.3.0/24" ]
+        },
+        "PID0" : {
+            "ipv4" : [ "0.0.0.0/0" ],
+            "ipv6" : [ "::/0" ]
+        }
+    }
+}
+
 MOCK = [
     {
         'uri': 'http://localhost:8181/alto/networkmap/default-networkmap',
@@ -313,7 +361,8 @@ MOCK = [
     {
         'uri': 'https://alto.example.com/networkmap/dynamic-networkmap',
         'headers': {'content-type': ALTO_CTYPE_NM},
-        'json_alt': [TEST_DYNAMIC_NM_1, TEST_DYNAMIC_NM_2, TEST_DYNAMIC_NM_3],
+        'json_alt': [TEST_DYNAMIC_NM_1, TEST_DYNAMIC_NM_2, TEST_DYNAMIC_NM_3,
+                     TEST_DYNAMIC_NM_4, TEST_DYNAMIC_NM_5],
         'index': 0,
         'status_code': 200
     },

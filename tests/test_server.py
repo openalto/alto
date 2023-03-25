@@ -27,6 +27,7 @@
 import os
 import re
 import json
+import time
 from unittest import mock
 import pytest
 
@@ -43,12 +44,16 @@ from alto.config import Config
 from alto.model.rfc9275 import ALTOPathVector
 from alto.utils import setup_debug_db, load_class
 from alto.common.constants import (ALTO_CONTENT_TYPE_IRD,
+                                   ALTO_CONTENT_TYPE_NM,
                                    ALTO_CONTENT_TYPE_ECS,
                                    ALTO_CONTENT_TYPE_ECS_PV,
                                    ALTO_CONTENT_TYPE_PROPMAP,
+                                   ALTO_CONTENT_TYPE_TIPS,
+                                   ALTO_CONTENT_TYPE_TIPS_VIEW,
                                    ALTO_PARAMETER_TYPE_ECS,
-                                   ALTO_PARAMETER_TYPE_PROPMAP)
-from alto.mock import mockGeoIP2, mockKazoo
+                                   ALTO_PARAMETER_TYPE_PROPMAP,
+                                   ALTO_PARAMETER_TYPE_TIPS)
+from alto.mock import mockGeoIP2, mockKazoo, mocked_requests_request
 
 __author__ = "OpenALTO"
 __copyright__ = "OpenALTO"
@@ -63,6 +68,10 @@ TEST_ROUTES = [
     {
         'path': '/directory/directory',
         'view': 'alto.server.northbound.alto.views.IRDView'
+    },
+    {
+        'path': '/networkmap/dynamic-networkmap',
+        'view': 'alto.server.northbound.alto.views.NetworkMapView'
     },
     {
         'path': '/pathvector/pv',
@@ -106,16 +115,23 @@ class ALTONorthboundTest(TestCase):
         os.environ.setdefault('ALTO_CONFIG', os.path.join(os.path.dirname(__file__), '../etc/alto.conf.test'))
         cls.config = Config()
         setup_debug_db(cls.config)
+        mock.patch.dict('sys.modules', {'geoip2.database': mockGeoIP2,
+                                        'geoip2.webservice': mockGeoIP2,
+                                        'kazoo.client': mockKazoo}).start()
+        mock.patch('requests.request', side_effect=mocked_requests_request).start()
         return super().setUpClass()
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        from alto.server.components.vcs import vcs_singleton
+        vcs_singleton.stop()
+        return super().tearDownClass()
 
     @classmethod
     def setUpTestData(cls) -> None:
         # Topology:
         #                            AS10000
         # h1 (10.1.0.2) - s1 (10.0.0.1) - (10.0.0.2) s2 - AS10086 - AS10010 - h2 (10.2.0.2)
-        mock.patch.dict('sys.modules', {'geoip2.database': mockGeoIP2,
-                                        'geoip2.webservice': mockGeoIP2,
-                                        'kazoo.client': mockKazoo}).start()
 
         fib = data_broker_manager.get('default', db_type='forwarding')
         eb = data_broker_manager.get('default', db_type='endpoint')
@@ -147,9 +163,10 @@ class ALTONorthboundTest(TestCase):
 
     def test_northbound_routes(self):
         resources = self.config.get_configured_resources()
+        tips_resources = [r for r in resources if resources[r]['type'] == 'tips']
 
         urls = show_urls(get_resolver().url_patterns)
-        assert len(urls) == len(resources) + 1
+        assert len(urls) == len(resources) + 1 + len(tips_resources) * 4
 
         for route in TEST_ROUTES:
             perform_route_test(route)
@@ -165,6 +182,14 @@ class ALTONorthboundTest(TestCase):
         ird = response.json()
         resources = self.config.get_configured_resources()
         self.assertEqual(len(ird['resources']), len(resources) - 1)
+
+
+    def test_view_networkmap(self):
+        response = self.client.get('/networkmap/dynamic-networkmap',
+                                   accepts=ALTO_CONTENT_TYPE_NM)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.has_header('Content-Type'), True)
+        self.assertEqual(response.get('Content-Type'), ALTO_CONTENT_TYPE_NM)
 
 
     def test_view_pv(self):
@@ -236,3 +261,54 @@ class ALTONorthboundTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.has_header('Content-Type'), True)
         self.assertEqual(response.get('Content-Type'), ALTO_CONTENT_TYPE_ECS)
+
+
+    def test_view_tips(self):
+        req_resource_id = 'dynamic-networkmap'
+        response = self.client.post('/tips-control/updates-graph',
+                                    data=json.dumps({
+                                        'resource-id': req_resource_id
+                                    }),
+                                    content_type=ALTO_PARAMETER_TYPE_TIPS,
+                                    accepts=ALTO_CONTENT_TYPE_TIPS)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.has_header('Content-Type'), True)
+        self.assertEqual(response.get('Content-Type'), ALTO_CONTENT_TYPE_TIPS)
+        summary = response.json()
+        uri = summary['tips-view-uri']
+        uri_slices = uri.split('/')
+        resource_id = uri_slices[-2]
+        digest = uri_slices[-1]
+        self.assertEqual(resource_id, req_resource_id)
+        self.assertIsNotNone(digest)
+
+        time.sleep(5)
+
+        response = self.client.get('{}/meta'.format(uri), accepts=ALTO_CONTENT_TYPE_TIPS_VIEW)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.has_header('Content-Type'), True)
+        self.assertEqual(response.get('Content-Type'), ALTO_CONTENT_TYPE_TIPS_VIEW)
+        meta_view = response.json()
+        self.assertIn('meta', meta_view.keys())
+        self.assertIn('updates-graph', meta_view.keys())
+        self.assertIn('push-state', meta_view.keys())
+
+        updates_graph = meta_view['updates-graph']
+        for start_seq in updates_graph:
+            for end_seq in updates_graph[start_seq]:
+                if start_seq == '0':
+                    self.assertEqual(updates_graph[start_seq][end_seq]['media-type'],
+                                     ALTO_CONTENT_TYPE_NM)
+                    response = self.client.get('{}/ug/{}/{}'.format(uri, start_seq, end_seq),
+                                               accepts=ALTO_CONTENT_TYPE_NM)
+                    self.assertEqual(response.status_code, 200)
+                    self.assertEqual(response.has_header('Content-Type'), True)
+                    self.assertEqual(response.get('Content-Type'), ALTO_CONTENT_TYPE_NM)
+                else:
+                    self.assertEqual(updates_graph[start_seq][end_seq]['media-type'],
+                                     'application/merge-patch+json')
+                    response = self.client.get('{}/ug/{}/{}'.format(uri, start_seq, end_seq),
+                                               accepts='application/merge-patch+json')
+                    self.assertEqual(response.status_code, 200)
+                    self.assertEqual(response.has_header('Content-Type'), True)
+                    self.assertEqual(response.get('Content-Type'), 'application/merge-patch+json')

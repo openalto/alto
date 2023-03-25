@@ -32,9 +32,14 @@ from urllib.parse import urljoin
 
 from alto.config import Config
 from alto.common.constants import ALTO_CONTENT_TYPES, ALTO_PARAMETER_TYPES, get_diff_format
+from alto.mock import (TEST_DYNAMIC_NM_1,
+                       TEST_DYNAMIC_NM_2,
+                       TEST_DYNAMIC_NM_3,
+                       TEST_DYNAMIC_NM_4,
+                       TEST_DYNAMIC_NM_5)
 
 from .db import data_broker_manager
-from .vcs import VersionControl
+from .vcs import vcs_singleton
 
 
 class MockService:
@@ -43,10 +48,14 @@ class MockService:
     """
 
     def __init__(self, *args, **kwargs):
-        pass
+        self.count = 0
+        self.maps = [TEST_DYNAMIC_NM_1, TEST_DYNAMIC_NM_2, TEST_DYNAMIC_NM_3,
+                     TEST_DYNAMIC_NM_4, TEST_DYNAMIC_NM_5]
 
     def lookup(self, *args, **kwargs):
-        return dict()
+        idx = self.count
+        self.count = (self.count + 1) % len(self.maps)
+        return self.maps[idx]
 
 
 class IRDService:
@@ -318,7 +327,7 @@ class TIPSControlService:
 
     def __init__(self, namespace, tips_resource_id='', **kwargs) -> None:
         self.ns = namespace
-        self.vcs = VersionControl()
+        self.vcs = vcs_singleton
         self.tips_resource_id = tips_resource_id
         self.config = Config()
 
@@ -362,7 +371,7 @@ class TIPSControlService:
         # TODO: check if the client has already subscribed the resource; if not, return Unauthorized error
         ug = self.vcs.get_tips_view(resource_id, digest)
         view = dict()
-        tag = hashlib.sha1(json.dumps(updates_graph, sort_keys=True).encode()).hexdigest()
+        tag = hashlib.sha1(json.dumps(ug, sort_keys=True).encode()).hexdigest()
         if not ug_only:
             view['meta'] = {'resource-id': digest, 'tag': tag}
             # TODO: support server push later
@@ -399,6 +408,8 @@ class TIPSControlService:
         return edge_view
 
     def get_tips_data(self, resource_id, digest, start_seq, end_seq):
+        start_seq = str(start_seq)
+        end_seq = str(end_seq)
         data = self.vcs.get_tips_data(resource_id, digest, start_seq, end_seq)
         if data is None:
             return None, None
@@ -409,6 +420,10 @@ class TIPSControlService:
         return self.config.get_configured_resources()
 
     def get_diff_format(self, resource_id, resources=None):
+        media_type = self.get_diff_media_type(resource_id, resources=resources)
+        return get_diff_format(media_type)
+
+    def get_diff_media_type(self, resource_id, resources=None):
         if resources is None:
             resources = self.get_configured_resources()
         resource_config = resources.get(self.tips_resource_id)
@@ -416,12 +431,11 @@ class TIPSControlService:
             return
         capability = resource_config.get('capabilities', dict())
         diff_format_dict = capability.get('incremental-change-media-types', dict())
-        media_type = diff_format_dict.get(resource_id)
-        return get_diff_format(media_type)
+        return diff_format_dict.get(resource_id)
 
     def get_media_type(self, resource_id, patch=False):
         resources = self.get_configured_resources()
         if patch:
-            return self.get_diff_format(resource_id, resources=resources)
+            return self.get_diff_media_type(resource_id, resources=resources)
         resource_config = resources.get(resource_id)
         return ALTO_CONTENT_TYPES.get(resource_config['type'])
