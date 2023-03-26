@@ -1,0 +1,80 @@
+module openalto-algorithm {
+  yang-version 1.1;
+
+  namespace "https://openalto.org/ns/openalto-algorithm";
+  prefix openalto-alg;
+
+  import ietf-alto {
+    prefix alto;
+    reference
+      "RFC XXXX: YANG Data Models for the Application-Layer
+                 Traffic Optimization (ALTO) Protocol";
+  }
+
+  import openalto-data-source {
+    prefix openalto-ds;
+  }
+
+  organization
+    "Example, Inc.";
+
+  contact
+    "Example, Inc.
+     Customer Service
+
+     E-mail: alto-oam-yang@example.com";
+
+  description
+    "This module contains a collection of vendor-specific cases of
+     information resource creation algorithms for ALTO.";
+
+  revision 2023-03-26 {
+    description
+      "Version 1.0";
+    reference
+      "RFC XXXX: YANG Data Models for the Application-Layer
+                 Traffic Optimization (ALTO) Protocol";
+  }
+
+  augment "/alto:alto/alto:alto-server/alto:resource"
+        + "/alto:resource-params/alto:networkmap"
+        + "/alto:alto-networkmap-params/alto:algorithm" {
+    case mock {
+      container mock-params {
+      }
+    }
+  }
+
+  augment "/alto:alto/alto:alto-server/alto:resource"
+        + "/alto:resource-params/alto:propmap"
+        + "/alto:alto-propmap-params/alto:algorithm" {
+    case geo-ip-property {
+      container geo-ip-property-params {
+        leaf data-source {
+          type leafref {
+            path '/alto:alto/alto:alto-server/alto:data-source'
+               + '/alto:source-id';
+          }
+          mandatory true;
+        }
+      }
+    }
+  }
+
+  augment "/alto:alto/alto:alto-server/alto:resource"
+        + "/alto:resource-params/alto:endpointcost"
+        + "/alto:alto-endpointcost-params/alto:algorithm" {
+    case geo-ip-dist {
+      container geo-ip-dist-params {
+        leaf data-source {
+          type leafref {
+            path '/alto:alto/alto:alto-server/alto:data-source'
+               + '/alto:source-id';
+          }
+          mandatory true;
+        }
+      }
+    }
+  }
+}
+
