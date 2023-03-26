@@ -299,6 +299,8 @@ class TIPSView(APIView):
         if request.user.is_authenticated:
             client_id = request.user.get_username()
         content = self.algorithm.subscribe(post_data, client_id=client_id)
+        if content is None:
+            return Response(dict(), status=404, content_type=ALTO_CONTENT_TYPE_ERROR)
         return Response(content, content_type=self.content_type)
 
 
@@ -312,8 +314,8 @@ class TIPSMetadataView(APIView):
     resource_id = ''
     content_type = ALTO_CONTENT_TYPE_TIPS_VIEW
 
-    def get(self, request, resource_id=None, digest=None, ug_meta=False, start_seq=None, end_seq=None):
-        content = self.algorithm.get_tips_view(resource_id, digest, ug_meta, start_seq, end_seq)
+    def get(self, request, resource_id=None, digest=None, ug_only=False, start_seq=None, end_seq=None):
+        content = self.algorithm.get_tips_view(resource_id, digest, ug_only, start_seq, end_seq)
         if content is None:
             return Response(dict(), status=404, content_type=ALTO_CONTENT_TYPE_ERROR)
         return Response(content, content_type=self.content_type)
@@ -373,6 +375,7 @@ def get_view(resource_type, resource_id, namespace, algorithm=None, params=dict(
         return
     if algorithm:
         alg_cls = load_class(algorithm)
+        params['resource_id'] = resource_id
         alg = alg_cls(namespace, **params)
         return view_cls.as_view(resource_id=resource_id, algorithm=alg)
     else:

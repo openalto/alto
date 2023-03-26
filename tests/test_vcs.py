@@ -121,10 +121,12 @@ class ALTOVersionControlTest(TestCase):
         self.assertEqual(digest, digest2, 'Same subscription MUST return the same digest')
 
         # Unsubscribe Test
-        self.vcs.unsubscribe(resource_id, digest, client_id='client2')
+        success = self.vcs.unsubscribe(resource_id, digest, client_id='client2')
+        self.assertTrue(success)
         self.assertIn((resource_id, digest), self.vcs.subscribers, 'Listener SHOULD NOT be removed if there are still active client')
 
-        self.vcs.unsubscribe(resource_id, digest, client_id='client1')
+        success = self.vcs.unsubscribe(resource_id, digest, client_id='client1')
+        self.assertTrue(success)
         self.assertNotIn((resource_id, digest), self.vcs.subscribers, 'Listener MUST be removed if no active client')
 
         # Stop Test

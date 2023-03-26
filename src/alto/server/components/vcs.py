@@ -113,20 +113,27 @@ class VersionControl:
 
         path = '/alto/{}/{}'.format(resource_id, digest)
         self.zk.ensure_path('{}/subscriber'.format(path))
-        self.zk.create('{}/subscriber/{}'.format(path, client_id), b'')
+        stat = self.zk.exists('{}/subscriber/{}'.format(path, client_id))
+        if stat is None:
+            print('New subscriber, adding to subscriber list...')
+            self.zk.create('{}/subscriber/{}'.format(path, client_id), b'')
         
         # check if resource has already been subscribed by another client
+        print('Existing the resource listeners: {}'.format(self.subscribers))
         if (resource_id, digest) not in self.subscribers:
+            print('Creating the resource listener (path={}) ...'.format(path))
             resource_listener = ResourceListener(self, path, resource_id, resource,
                                                  request_body=request_body,
                                                  polling_interval=self.polling_interval,
                                                  snapshot_freq=self.snapshot_freq,
                                                  init_ver=self.init_version,
                                                  diff_format=diff_format)
+            print('Created the resource listener (path={}, success={})'.format(path, resource_listener.success))
             if not resource_listener.success:
                 return None
             self.subscribers[(resource_id, digest)] = resource_listener
             resource_listener.start()
+            print('The resource listener (path={}) started'.format(path))
 
         return digest
 
@@ -156,6 +163,8 @@ class VersionControl:
                 self.zk.delete('/alto/{}/{}'.format(resource_id, digest), recursive=True)
                 del self.subscribers[(resource_id, digest)]
         except Exception:
+            import traceback
+            print(traceback.format_exc())
             return False
 
         return True
@@ -217,14 +226,16 @@ def get_resource(ctx: VersionControl, resource_id, resource, request_body=None):
     response : bytes or None
         The content of the query response. If None, the request failed.
     """
-    base_uri = ctx.config.get_server_base_uri()
+    # base_uri = ctx.config.get_server_base_uri()
+    # FIXME: uri SHOULD NOT be hardcoded
+    base_uri = 'http://localhost:8000'
     resource_path = resource.get('path')
     url = urljoin(base_uri, '{}/{}'.format(resource_path, resource_id))
     resource_type = resource.get('type')
     kwargs = dict()
 
-    auth = ctx.config.get_server_auth()
-    kwargs['auth'] = auth
+    # auth = ctx.config.get_server_auth()
+    # kwargs['auth'] = auth
 
     if resource_type == 'ird':
         method = 'GET'
@@ -250,7 +261,9 @@ def get_resource(ctx: VersionControl, resource_id, resource, request_body=None):
         kwargs['headers'] = {
             'content-type': ALTO_PARAMETER_TYPES.get(resource_type)
         }
+    print('Sending request (method={}, url={}, kwargs={})'.format(method, url, kwargs))
     res = requests.request(method, url, **kwargs)
+    print('Got reponse (status={})'.format(res.status_code))
     if res.status_code == 200:
         return res.content
     else:
@@ -287,7 +300,9 @@ class ResourceListener(Thread):
 
 
     def initialize(self, init_ver):
+        print('Getting resource (id={}, input={}) for intialization...'.format(self.resource_id, self.request_body))
         raw_last_res = get_resource(self.ctx, self.resource_id, self.resource, self.request_body)
+        print('Got resource (id={}, input={})'.format(self.resource_id, self.request_body))
         if raw_last_res is None:
             return False
         self.ctx.zk.ensure_path('{}/ug/0'.format(self.path))
