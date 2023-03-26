@@ -1,0 +1,149 @@
+module openalto-data-source {
+  yang-version 1.1;
+
+  namespace "https://openalto.org/ns/openalto-data-source";
+  prefix openalto-ds;
+
+  import ietf-inet-types {
+    prefix inet;
+    reference
+      "RFC 6991: Common YANG Data Types";
+  }
+
+  import ietf-alto {
+    prefix alto;
+    reference
+      "RFC XXXX: YANG Data Models for the Application-Layer
+                 Traffic Optimization (ALTO) Protocol";
+  }
+
+  organization
+    "Example, Inc.";
+
+  contact
+    "Example, Inc.
+     Customer Service
+
+     E-mail: alto-oam-yang@example.com";
+
+  description
+    "This module contains a collection of vendor-specific cases of
+     data sources for ALTO.";
+
+  revision 2023-03-26 {
+    description
+      "Version 1.0";
+    reference
+      "RFC XXXX: YANG Data Models for the Application-Layer
+                 Traffic Optimization (ALTO) Protocol";
+  }
+
+  identity bgp-looking-glass {
+    base alto:source-type;
+    description
+      "Identity for data source of BGP looking glass.";
+  }
+
+  identity cric-db {
+    base alto:source-type;
+    description
+      "Identity for data source of CRIC database.";
+  }
+
+  identity g2 {
+    base alto:source-type;
+    description
+      "Identity for data source of G2 API server.";
+  }
+
+  identity geoip {
+    base alto:source-type;
+    description
+      "Identity for data source of GeoIP database.";
+  }
+
+  augment "/alto:alto/alto:alto-server/alto:data-source"
+        + "/alto:source-params" {
+    case bgp-looking-glass {
+      when 'derived-from-or-self(alto:source-type,'
+         + '"bgp-looking-glass")';
+      container bgp-looking-glass-params {
+        leaf uri {
+          type inet:uri;
+          mandatory true;
+        }
+
+        leaf default-router {
+          type string;
+        }
+      }
+    }
+    case cric-db {
+      when 'derived-from-or-self(alto:source-type,'
+         + '"cric-db")';
+      container cric-db-params {
+        leaf uri {
+          type inet:uri;
+          mandatory true;
+        }
+
+        leaf local-asn {
+          type inet:as-number;
+          mandatory true;
+        }
+      }
+    }
+    case g2 {
+      when 'derived-from-or-self(alto:source-type,'
+         + '"g2")';
+      container g2-params {
+        leaf base-uri {
+          type inet:uri;
+          mandatory true;
+        }
+
+        container auth {
+          leaf username {
+            type string;
+          }
+          leaf password {
+            type string;
+          }
+        }
+
+        leaf ec-rule {
+          type inet:uri {
+            pattern 'file:.*';
+          }
+        }
+      }
+    }
+    case geoip {
+      when 'derived-from-or-self(alto:source-type,'
+         + '"geoip")';
+      container geoip-params {
+
+        choice geoip-db-type {
+          case database {
+            leaf db-path {
+              type inet:uri {
+                pattern 'file:.*';
+              }
+              mandatory true;
+            }
+          }
+          case webservice {
+            leaf account-id {
+              type string;
+              mandatory true;
+            }
+            leaf license-key {
+              type string;
+              mandatory true;
+            }
+          }
+        }
+      }
+    }
+  }
+}
