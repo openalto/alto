@@ -181,6 +181,11 @@ class Config:
         return int(self.parser.get('server.vcs', 'snapshot_freq', fallback=5))
 
 
+    def get_vcs_snapshot_limit(self):
+        self.parser.read(self.location)
+        return int(self.parser.get('server.vcs', 'snapshot_limit', fallback=10))
+
+
     def get_vcs_init_version(self):
         self.parser.read(self.location)
         return int(self.parser.get('server.vcs', 'init_version', fallback=1))

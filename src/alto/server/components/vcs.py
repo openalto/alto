@@ -50,6 +50,7 @@ class VersionControl:
         self.zk_timeout = self.config.get_vcs_zookeeper_timeout()
         self.polling_interval = self.config.get_vcs_polling_interval()
         self.snapshot_freq = self.config.get_vcs_snapshot_freq()
+        self.snapshot_limit = self.config.get_vcs_snapshot_limit()
         self.init_version = self.config.get_vcs_init_version()
         self.zk = KazooClient(hosts=self.zk_host)
         self.zk.start(timeout=self.zk_timeout)
@@ -126,6 +127,7 @@ class VersionControl:
                                                  request_body=request_body,
                                                  polling_interval=self.polling_interval,
                                                  snapshot_freq=self.snapshot_freq,
+                                                 snapshot_limit=self.snapshot_limit,
                                                  init_ver=self.init_version,
                                                  diff_format=diff_format)
             print('Created the resource listener (path={}, success={})'.format(path, resource_listener.success))
@@ -176,9 +178,9 @@ class VersionControl:
         """
         ug = dict()
         ug_path = '/alto/{}/{}/ug'.format(resource_id, digest)
-        start_seqs = sorted(self.zk.get_children(ug_path))
+        start_seqs = self.zk.get_children(ug_path)
         for start_seq in start_seqs:
-            ug[start_seq] = sorted(self.zk.get_children('{}/{}'.format(ug_path, start_seq)))
+            ug[start_seq] = self.zk.get_children('{}/{}'.format(ug_path, start_seq))
         return ug
 
 
@@ -186,10 +188,12 @@ class VersionControl:
         ug = self.get_tips_view(resource_id, digest)
         ug_path = '/alto/{}/{}/ug'.format(resource_id, digest)
         print(ug_path)
-        for start_seq in sorted(ug.keys()):
-            print(' ' * len(ug_path) + '%4d' % int(start_seq))
-            for end_seq in ug[start_seq]:
-                print(' ' * (len(ug_path)+5) + '%4d' % int(end_seq))
+        ordered_start_seqs = sorted([int(sid) for sid in ug.keys()])
+        for start_seq in ordered_start_seqs:
+            print(' ' * len(ug_path) + '%4d' % start_seq)
+            ordered_end_seqs = sorted([int(eid) for eid in ug[str(start_seq)]])
+            for end_seq in ordered_end_seqs:
+                print(' ' * (len(ug_path)+5) + '%4d' % end_seq)
 
 
     def get_tips_data(self, resource_id, digest, start_seq, end_seq):
@@ -285,7 +289,8 @@ class ResourceListener(Thread):
 
     def __init__(self, ctx: VersionControl, path, resource_id, resource,
                  request_body=None, polling_interval=1, snapshot_freq=3,
-                 init_ver=1, diff_format: Diff=Diff.JSON_MERGE_PATCH) -> None:
+                 snapshot_limit=10, init_ver=1,
+                 diff_format: Diff=Diff.JSON_MERGE_PATCH) -> None:
         self.ctx = ctx
         self.path = path
         self.resource_id = resource_id
@@ -294,6 +299,7 @@ class ResourceListener(Thread):
         self.stop_event = Event()
         self.polling_interval = polling_interval
         self.snapshot_freq = snapshot_freq
+        self.snapshot_limit = snapshot_limit
         self.diff_format = diff_format
         self.success = self.initialize(init_ver)
         super().__init__()
@@ -331,6 +337,20 @@ class ResourceListener(Thread):
                 self.last_ver = new_ver
                 if (self.last_ver - self.init_ver) % self.snapshot_freq == 0:
                     self.ctx.zk.create('{}/ug/0/{}'.format(self.path, self.last_ver), raw_res)
+            self.clean_up_old_snapshots()
+
+
+    def clean_up_old_snapshots(self):
+        snapshots = sorted([int(sid) for sid in self.ctx.zk.get_children('{}/ug/0'.format(self.path))])
+        if len(snapshots) > self.snapshot_limit:
+            last_snapshot = snapshots[-self.snapshot_limit]
+            outdated_snapshots = snapshots[:-self.snapshot_limit]
+            for sid in outdated_snapshots:
+                self.ctx.zk.delete('{}/ug/0/{}'.format(self.path, sid))
+            outdated_start_seqs = sorted([int(sid) for sid in self.ctx.zk.get_children('{}/ug'.format(self.path))
+                                          if 0 < int(sid) < last_snapshot])
+            for sid in outdated_start_seqs:
+                self.ctx.zk.delete('{}/ug/{}'.format(self.path, sid), recursive=True)
 
 
     def create_patch(self, old, new):
