@@ -168,7 +168,8 @@ resources = {
 zookeeper_host = zoo1
 zookeeper_timeout = 15
 polling_interval = 1
-snapshot_freq = 3
+snapshot_freq = 2
+snapshot_limit = 2
 init_version = 100
 
 ####################################################
