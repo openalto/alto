@@ -91,7 +91,10 @@ def test_alto_config(*args):
     assert polling_interval == 1
 
     snapshot_freq = config.get_vcs_snapshot_freq()
-    assert snapshot_freq == 3
+    assert snapshot_freq == 2
+
+    snapshot_limit = config.get_vcs_snapshot_limit()
+    assert snapshot_limit == 2
 
     init_version = config.get_vcs_init_version()
     assert init_version == 100

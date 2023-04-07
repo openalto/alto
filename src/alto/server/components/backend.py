@@ -27,7 +27,10 @@
 
 import math
 import hashlib
+import ipaddress
 import json
+import random
+import time
 from urllib.parse import urljoin
 
 from alto.config import Config
@@ -47,15 +50,46 @@ class MockService:
     Mock backend algorithm for test purpose.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, resource_id='default-networkmap',
+                 resource_type='network-map', refresh_interval=-1, **kwargs):
         self.count = 0
-        self.maps = [TEST_DYNAMIC_NM_1, TEST_DYNAMIC_NM_2, TEST_DYNAMIC_NM_3,
-                     TEST_DYNAMIC_NM_4, TEST_DYNAMIC_NM_5]
+        self.resource_id = resource_id
+        self.resource_type = resource_type
+        self.refresh_interval = refresh_interval
+        self.last_timestamp = -1
+        self.map = dict()
+
+    def get_random_ip_range(self, ip_prefix='192.0.2.{}'):
+        first, second = sorted(random.choices(range(256), k=2))
+        first_ip = ipaddress.ip_address(ip_prefix.format(first))
+        second_ip = ipaddress.ip_address(ip_prefix.format(second))
+        return ipaddress.summarize_address_range(first_ip, second_ip)
+
+    def next_map(self):
+        data = dict()
+        if self.resource_type == 'network-map':
+            data['PID0'] = { "ipv4" : [ "0.0.0.0/0" ], "ipv6" : [ "::/0" ] }
+            data['PID1'] = { "ipv4": [ ip.exploded for ip in self.get_random_ip_range('192.0.2.{}') ] }
+            data['PID2'] = { "ipv4": [ ip.exploded for ip in self.get_random_ip_range('198.51.100.{}') ] }
+            data['PID3'] = { "ipv4": [ ip.exploded for ip in self.get_random_ip_range('203.0.113.{}') ] }
+        return {
+            "meta" : {
+                "vtag": {
+                    "resource-id": self.resource_id,
+                    "tag": hashlib.sha1(json.dumps(data, sort_keys=True).encode()).hexdigest()
+                }
+            },
+            "network-map": data
+        }
 
     def lookup(self, *args, **kwargs):
-        idx = self.count
-        self.count = (self.count + 1) % len(self.maps)
-        return self.maps[idx]
+        now = time.time()
+        if self.refresh_interval < 0:
+            self.map = self.next_map()
+        elif self.last_timestamp < 0 or now - self.last_timestamp > self.refresh_interval:
+            self.map = self.next_map()
+            self.last_timestamp = now
+        return self.map
 
 
 class IRDService:
@@ -337,13 +371,16 @@ class TIPSControlService:
         diff_format = self.get_diff_format(resource_id)
         if diff_format is None:
             return
+        print('Client ({}) subscribing {} (input={}, diff_formath={})'.format(client_id, resource_id, request_body, diff_format))
         digest = self.vcs.subscribe(resource_id, request_body=request_body,
                                     client_id=client_id, diff_format=diff_format)
+        print('Client ({}) subscribed {}: {}'.format(client_id, resource_id, digest))
         tips_view = dict()
         # FIXME: the path root '/tips' SHOULD NOT be hardcoded
         tips_view['tips-view-uri'] = '/tips/{}/{}'.format(resource_id, digest)
         tips_view_summary = dict()
         updates_graph = self.vcs.get_tips_view(resource_id, digest)
+        print('Got updates graph of {}/{}'.format(resource_id, digest))
         seqs = set()
         for start_seq in updates_graph:
             if start_seq != '0':

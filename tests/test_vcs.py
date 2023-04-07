@@ -80,6 +80,10 @@ class ALTOVersionControlTest(TestCase):
         self.vcs.show_tips_view(resource_id, digest)
         update_graph = self.vcs.get_tips_view(resource_id, digest)
         full_versions = update_graph['0']
+
+        snapshot_limit = self.config.get_vcs_snapshot_limit()
+        self.assertLessEqual(len(full_versions), snapshot_limit)
+
         full_ver_0 = full_versions[0]
         full_repl_str_0 = self.vcs.get_tips_data(resource_id, digest, '0', full_ver_0)
         full_repl_0 = json.loads(full_repl_str_0)
@@ -121,10 +125,12 @@ class ALTOVersionControlTest(TestCase):
         self.assertEqual(digest, digest2, 'Same subscription MUST return the same digest')
 
         # Unsubscribe Test
-        self.vcs.unsubscribe(resource_id, digest, client_id='client2')
+        success = self.vcs.unsubscribe(resource_id, digest, client_id='client2')
+        self.assertTrue(success)
         self.assertIn((resource_id, digest), self.vcs.subscribers, 'Listener SHOULD NOT be removed if there are still active client')
 
-        self.vcs.unsubscribe(resource_id, digest, client_id='client1')
+        success = self.vcs.unsubscribe(resource_id, digest, client_id='client1')
+        self.assertTrue(success)
         self.assertNotIn((resource_id, digest), self.vcs.subscribers, 'Listener MUST be removed if no active client')
 
         # Stop Test

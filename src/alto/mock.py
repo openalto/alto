@@ -103,6 +103,15 @@ class MockKazoo(MagicMock):
                     parent[n] = dict()
                 parent = parent[n]
 
+        def exists(self, path, **kwargs):
+            nodes = self._parse_path(path)
+            parent = self.base
+            for n in nodes:
+                if n not in parent:
+                    return None
+                parent = parent[n]
+            return True
+
         def create(self, path, data, **kwargs):
             nodes = self._parse_path(path)
             parent = self._get_leaf_node(nodes[:-1])
@@ -359,7 +368,7 @@ MOCK = [
         'status_code': 200
     },
     {
-        'uri': 'https://alto.example.com/networkmap/dynamic-networkmap',
+        'uri': 'http://localhost:8000/networkmap/dynamic-networkmap',
         'headers': {'content-type': ALTO_CTYPE_NM},
         'json_alt': [TEST_DYNAMIC_NM_1, TEST_DYNAMIC_NM_2, TEST_DYNAMIC_NM_3,
                      TEST_DYNAMIC_NM_4, TEST_DYNAMIC_NM_5],

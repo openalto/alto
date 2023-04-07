@@ -50,6 +50,7 @@ class VersionControl:
         self.zk_timeout = self.config.get_vcs_zookeeper_timeout()
         self.polling_interval = self.config.get_vcs_polling_interval()
         self.snapshot_freq = self.config.get_vcs_snapshot_freq()
+        self.snapshot_limit = self.config.get_vcs_snapshot_limit()
         self.init_version = self.config.get_vcs_init_version()
         self.zk = KazooClient(hosts=self.zk_host)
         self.zk.start(timeout=self.zk_timeout)
@@ -113,20 +114,28 @@ class VersionControl:
 
         path = '/alto/{}/{}'.format(resource_id, digest)
         self.zk.ensure_path('{}/subscriber'.format(path))
-        self.zk.create('{}/subscriber/{}'.format(path, client_id), b'')
+        stat = self.zk.exists('{}/subscriber/{}'.format(path, client_id))
+        if stat is None:
+            print('New subscriber, adding to subscriber list...')
+            self.zk.create('{}/subscriber/{}'.format(path, client_id), b'')
         
         # check if resource has already been subscribed by another client
+        print('Existing the resource listeners: {}'.format(self.subscribers))
         if (resource_id, digest) not in self.subscribers:
+            print('Creating the resource listener (path={}) ...'.format(path))
             resource_listener = ResourceListener(self, path, resource_id, resource,
                                                  request_body=request_body,
                                                  polling_interval=self.polling_interval,
                                                  snapshot_freq=self.snapshot_freq,
+                                                 snapshot_limit=self.snapshot_limit,
                                                  init_ver=self.init_version,
                                                  diff_format=diff_format)
+            print('Created the resource listener (path={}, success={})'.format(path, resource_listener.success))
             if not resource_listener.success:
                 return None
             self.subscribers[(resource_id, digest)] = resource_listener
             resource_listener.start()
+            print('The resource listener (path={}) started'.format(path))
 
         return digest
 
@@ -156,6 +165,8 @@ class VersionControl:
                 self.zk.delete('/alto/{}/{}'.format(resource_id, digest), recursive=True)
                 del self.subscribers[(resource_id, digest)]
         except Exception:
+            import traceback
+            print(traceback.format_exc())
             return False
 
         return True
@@ -167,9 +178,9 @@ class VersionControl:
         """
         ug = dict()
         ug_path = '/alto/{}/{}/ug'.format(resource_id, digest)
-        start_seqs = sorted(self.zk.get_children(ug_path))
+        start_seqs = self.zk.get_children(ug_path)
         for start_seq in start_seqs:
-            ug[start_seq] = sorted(self.zk.get_children('{}/{}'.format(ug_path, start_seq)))
+            ug[start_seq] = self.zk.get_children('{}/{}'.format(ug_path, start_seq))
         return ug
 
 
@@ -177,10 +188,12 @@ class VersionControl:
         ug = self.get_tips_view(resource_id, digest)
         ug_path = '/alto/{}/{}/ug'.format(resource_id, digest)
         print(ug_path)
-        for start_seq in sorted(ug.keys()):
-            print(' ' * len(ug_path) + '%4d' % int(start_seq))
-            for end_seq in ug[start_seq]:
-                print(' ' * (len(ug_path)+5) + '%4d' % int(end_seq))
+        ordered_start_seqs = sorted([int(sid) for sid in ug.keys()])
+        for start_seq in ordered_start_seqs:
+            print(' ' * len(ug_path) + '%4d' % start_seq)
+            ordered_end_seqs = sorted([int(eid) for eid in ug[str(start_seq)]])
+            for end_seq in ordered_end_seqs:
+                print(' ' * (len(ug_path)+5) + '%4d' % end_seq)
 
 
     def get_tips_data(self, resource_id, digest, start_seq, end_seq):
@@ -217,14 +230,16 @@ def get_resource(ctx: VersionControl, resource_id, resource, request_body=None):
     response : bytes or None
         The content of the query response. If None, the request failed.
     """
-    base_uri = ctx.config.get_server_base_uri()
+    # base_uri = ctx.config.get_server_base_uri()
+    # FIXME: uri SHOULD NOT be hardcoded
+    base_uri = 'http://localhost:8000'
     resource_path = resource.get('path')
     url = urljoin(base_uri, '{}/{}'.format(resource_path, resource_id))
     resource_type = resource.get('type')
     kwargs = dict()
 
-    auth = ctx.config.get_server_auth()
-    kwargs['auth'] = auth
+    # auth = ctx.config.get_server_auth()
+    # kwargs['auth'] = auth
 
     if resource_type == 'ird':
         method = 'GET'
@@ -250,7 +265,9 @@ def get_resource(ctx: VersionControl, resource_id, resource, request_body=None):
         kwargs['headers'] = {
             'content-type': ALTO_PARAMETER_TYPES.get(resource_type)
         }
+    print('Sending request (method={}, url={}, kwargs={})'.format(method, url, kwargs))
     res = requests.request(method, url, **kwargs)
+    print('Got reponse (status={})'.format(res.status_code))
     if res.status_code == 200:
         return res.content
     else:
@@ -272,7 +289,8 @@ class ResourceListener(Thread):
 
     def __init__(self, ctx: VersionControl, path, resource_id, resource,
                  request_body=None, polling_interval=1, snapshot_freq=3,
-                 init_ver=1, diff_format: Diff=Diff.JSON_MERGE_PATCH) -> None:
+                 snapshot_limit=10, init_ver=1,
+                 diff_format: Diff=Diff.JSON_MERGE_PATCH) -> None:
         self.ctx = ctx
         self.path = path
         self.resource_id = resource_id
@@ -281,13 +299,16 @@ class ResourceListener(Thread):
         self.stop_event = Event()
         self.polling_interval = polling_interval
         self.snapshot_freq = snapshot_freq
+        self.snapshot_limit = snapshot_limit
         self.diff_format = diff_format
         self.success = self.initialize(init_ver)
         super().__init__()
 
 
     def initialize(self, init_ver):
+        print('Getting resource (id={}, input={}) for intialization...'.format(self.resource_id, self.request_body))
         raw_last_res = get_resource(self.ctx, self.resource_id, self.resource, self.request_body)
+        print('Got resource (id={}, input={})'.format(self.resource_id, self.request_body))
         if raw_last_res is None:
             return False
         self.ctx.zk.ensure_path('{}/ug/0'.format(self.path))
@@ -316,6 +337,20 @@ class ResourceListener(Thread):
                 self.last_ver = new_ver
                 if (self.last_ver - self.init_ver) % self.snapshot_freq == 0:
                     self.ctx.zk.create('{}/ug/0/{}'.format(self.path, self.last_ver), raw_res)
+            self.clean_up_old_snapshots()
+
+
+    def clean_up_old_snapshots(self):
+        snapshots = sorted([int(sid) for sid in self.ctx.zk.get_children('{}/ug/0'.format(self.path))])
+        if len(snapshots) > self.snapshot_limit:
+            last_snapshot = snapshots[-self.snapshot_limit]
+            outdated_snapshots = snapshots[:-self.snapshot_limit]
+            for sid in outdated_snapshots:
+                self.ctx.zk.delete('{}/ug/0/{}'.format(self.path, sid))
+            outdated_start_seqs = sorted([int(sid) for sid in self.ctx.zk.get_children('{}/ug'.format(self.path))
+                                          if 0 < int(sid) < last_snapshot])
+            for sid in outdated_start_seqs:
+                self.ctx.zk.delete('{}/ug/{}'.format(self.path, sid), recursive=True)
 
 
     def create_patch(self, old, new):

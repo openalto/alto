@@ -78,6 +78,25 @@ resources = {
       "namespaces": []
     }
   },
+  "dynamic-networkmap": {
+    "type": "network-map",
+    "path": "networkmap",
+    "namespace": "default",
+    "algorithm": "alto.server.components.backend.MockService",
+    "params": {}
+  },
+  "updates-graph": {
+    "type": "tips",
+    "path": "tips-control",
+    "namespace": "default",
+    "algorithm": "alto.server.components.backend.TIPSControlService",
+    "capabilities": {
+      "incremental-change-media-types": {
+        "dynamic-networkmap": "application/merge-patch+json"
+      }
+    },
+    "params": {}
+  },
   "pv": {
     "type": "path-vector",
     "path": "pathvector",
@@ -123,6 +142,14 @@ db_config = {
       "host": "localhost",
       "port": 6379,
       "db": 0}}}
+
+[server.vcs]
+# Configuration for version control system
+zookeeper_host = zoo1
+zookeeper_timeout = 15
+polling_interval = 5
+snapshot_freq = 2
+init_version = 101
 
 
 ####################################################
