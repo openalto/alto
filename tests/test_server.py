@@ -166,7 +166,7 @@ class ALTONorthboundTest(TestCase):
         tips_resources = [r for r in resources if resources[r]['type'] == 'tips']
 
         urls = show_urls(get_resolver().url_patterns)
-        assert len(urls) == len(resources) + 1 + len(tips_resources) * 4
+        assert len(urls) == len(resources) + 1 + len(tips_resources) * 4 + 1
 
         for route in TEST_ROUTES:
             perform_route_test(route)

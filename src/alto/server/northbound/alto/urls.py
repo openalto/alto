@@ -1,4 +1,5 @@
 from django.urls import path
+from rest_framework.schemas import get_schema_view
 
 from alto.config import Config
 
@@ -30,6 +31,9 @@ def generate_northbound_routes():
             tips_data_view = views.get_view('tips-data', resource_id, namespace, algorithm, params)
             urlpatterns.append(path('tips/<resource_id>/<digest>/ug/<int:start_seq>/<int:end_seq>',
                                     tips_data_view, name='{}:metadata'.format(resource_id)))
+
+    urlpatterns.append(path('openapi.yaml', get_schema_view(
+        title="openalto/alto northbound API", description="openalto/alto northbound API"), name='openapi-schema'))
     return urlpatterns
 
 
