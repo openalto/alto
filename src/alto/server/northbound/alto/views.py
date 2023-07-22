@@ -127,8 +127,8 @@ class EndpointCostView(APIView):
         dsts = endpoint_filter['dsts']
         cost_type = request.data.get('cost-type')
         if cost_type:
-            self.safe_check(cost_type) 
-        content = self.algorithm.lookup(srcs, dsts)
+            self.safe_check(cost_type)
+        content = self.algorithm.lookup(srcs, dsts, cost_type)
         constraints = request.data.get('constraints')
         if constraints:
             content = self.apply_constraints(content, constraints)
