@@ -289,7 +289,7 @@ class TIPSView(APIView):
     renderer_classes = [TIPSRender]
     parser_classes = [TIPSParser]
 
-    algorithm = TIPSControlService(config.get_default_namespace())
+    algorithm = None # TIPSControlService(config.get_default_namespace())
     resource_id = ''
     content_type = ALTO_CONTENT_TYPE_TIPS
 
@@ -310,7 +310,7 @@ class TIPSMetadataView(APIView):
     """
     renderer_classes = [TIPSRender]
 
-    algorithm = TIPSControlService(config.get_default_namespace())
+    algorithm = None # TIPSControlService(config.get_default_namespace())
     resource_id = ''
     content_type = ALTO_CONTENT_TYPE_TIPS_VIEW
 
@@ -336,7 +336,7 @@ class TIPSDataTransferView(APIView):
     """
     renderer_classes = [TIPSRender]
 
-    algorithm = TIPSControlService(config.get_default_namespace())
+    algorithm = None # TIPSControlService(config.get_default_namespace())
     resource_id = ''
     content_type = ALTO_CONTENT_TYPE_TIPS
 

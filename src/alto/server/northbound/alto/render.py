@@ -64,7 +64,8 @@ class EndpointCostRender(JSONRenderer):
 
     def render(self, ecmap, accepted_media_type=None, renderer_context=None):
         data = dict()
-        data['endpoint-cost-map'] = ecmap
+        data['meta'] = ecmap['meta']
+        data['endpoint-cost-map'] = ecmap['endpoint-cost-map']
         return super(EndpointCostRender, self).render(data, accepted_media_type,
                                                       renderer_context)
 

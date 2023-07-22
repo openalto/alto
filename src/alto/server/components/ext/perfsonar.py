@@ -26,8 +26,6 @@
 
 import requests
 
-from alto.config import Config
-
 class WrappedPerfSonarServiceV1:
     """
     Backend algorithm for ECS based on PerfSonar wrapper
@@ -35,12 +33,13 @@ class WrappedPerfSonarServiceV1:
     This algorithm is basically a proxy
     """
 
-    def __init__(self, uri, **kwargs):
+    def __init__(self, namespace, uri=None, **kwargs):
+        self.namespace = namespace
         self.uri = uri
 
     def lookup(self, srcs, dsts, cost_type):
         headers = {
-            'accept': 'application/json'
+            'content-type': 'application/json'
         }
         req = {
             'cost-type': {
@@ -55,6 +54,5 @@ class WrappedPerfSonarServiceV1:
                 }
             ]
         }
-        data = requests.post(self.uri, data=req, headers=headers)
-        print(data)
-        return None
+        resp = requests.post(self.uri, json=req, headers=headers)
+        return resp.json()

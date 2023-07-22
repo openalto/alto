@@ -42,7 +42,6 @@ from alto.mock import (TEST_DYNAMIC_NM_1,
                        TEST_DYNAMIC_NM_5)
 
 from .db import data_broker_manager
-from .vcs import vcs_singleton
 
 
 class MockService:
@@ -360,6 +359,8 @@ class TIPSControlService:
     """
 
     def __init__(self, namespace, tips_resource_id='', **kwargs) -> None:
+        from .vcs import vcs_singleton
+
         self.ns = namespace
         self.vcs = vcs_singleton
         self.tips_resource_id = tips_resource_id
