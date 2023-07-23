@@ -55,4 +55,6 @@ class WrappedPerfSonarServiceV1:
             ]
         }
         resp = requests.post(self.uri, json=req, headers=headers)
-        return resp.json()
+        data = resp.json()
+        data['cost-type']['cost-mode'] = cost_type['cost-mode']
+        return data
