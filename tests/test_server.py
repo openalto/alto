@@ -53,7 +53,7 @@ from alto.common.constants import (ALTO_CONTENT_TYPE_IRD,
                                    ALTO_PARAMETER_TYPE_ECS,
                                    ALTO_PARAMETER_TYPE_PROPMAP,
                                    ALTO_PARAMETER_TYPE_TIPS)
-from alto.mock import mockGeoIP2, mockKazoo, mocked_requests_request
+from alto.mock import mockGeoIP2, mockKazoo, mocked_requests_get, mocked_requests_request
 
 __author__ = "OpenALTO"
 __copyright__ = "OpenALTO"
@@ -74,12 +74,24 @@ TEST_ROUTES = [
         'view': 'alto.server.northbound.alto.views.NetworkMapView'
     },
     {
+        'path': '/tips-control/updates-graph',
+        'view': 'alto.server.northbound.alto.views.TIPSView'
+    },
+    {
         'path': '/pathvector/pv',
         'view': 'alto.server.northbound.alto.views.PathVectorView'
     },
     {
         'path': '/entityprop/geoip',
         'view': 'alto.server.northbound.alto.views.EntityPropertyView'
+    },
+    {
+        'path': '/endpointcost/geodist',
+        'view': 'alto.server.northbound.alto.views.EndpointCostView'
+    },
+    {
+        'path': '/endpointcost/ps',
+        'view': 'alto.server.northbound.alto.views.EndpointCostView'
     },
     {
         'path': '/errortest/404',
@@ -119,6 +131,7 @@ class ALTONorthboundTest(TestCase):
                                         'geoip2.webservice': mockGeoIP2,
                                         'kazoo.client': mockKazoo}).start()
         mock.patch('requests.request', side_effect=mocked_requests_request).start()
+        mock.patch('requests.post', side_effect=mocked_requests_get).start()
         return super().setUpClass()
 
     @classmethod
@@ -254,6 +267,24 @@ class ALTONorthboundTest(TestCase):
                                         'endpoints': {
                                             'srcs': ['ipv4:10.1.0.2'],
                                             'dsts': ['ipv4:10.2.0.2', 'ipv4:10.3.0.2']
+                                        }
+                                    }),
+                                    content_type=ALTO_PARAMETER_TYPE_ECS,
+                                    accepts=ALTO_CONTENT_TYPE_ECS)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.has_header('Content-Type'), True)
+        self.assertEqual(response.get('Content-Type'), ALTO_CONTENT_TYPE_ECS)
+
+    def test_view_perfsonar(self):
+        response = self.client.post('/endpointcost/ps',
+                                    data=json.dumps({
+                                        "cost-type": {
+                                            "cost-mode": "numerical",
+                                            "cost-metric": "tput:mean",
+                                        },
+                                        "endpoints": {
+                                            "srcs": [ "ipv4:202.122.33.13" ],
+                                            "dsts": [ "ipv4:192.41.231.82" ]
                                         }
                                     }),
                                     content_type=ALTO_PARAMETER_TYPE_ECS,

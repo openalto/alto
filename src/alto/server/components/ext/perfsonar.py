@@ -33,9 +33,9 @@ class WrappedPerfSonarServiceV1:
     This algorithm is basically a proxy
     """
 
-    def __init__(self, namespace, uri=None, **kwargs):
+    def __init__(self, namespace, visualnet_api=None, **kwargs):
         self.namespace = namespace
-        self.uri = uri
+        self.uri = visualnet_api
 
     def lookup(self, srcs, dsts, cost_type):
         headers = {
