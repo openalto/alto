@@ -210,9 +210,13 @@ class GeoDistanceService(GeoIPPropertyService):
                                                math.cos(lat1)*math.cos(lat2)*math.sin(d_lng/2)**2))
         return d_geo
 
-    def lookup(self, srcs, dsts):
+    def lookup(self, srcs, dsts, cost_type):
         if self.autoreload:
             self.db.build_cache()
+
+        content = dict()
+        content['meta'] = dict()
+        content['meta']['cost-type'] = cost_type
 
         costs = dict()
         endpoints = set(srcs).union(set(dsts))
@@ -227,7 +231,8 @@ class GeoDistanceService(GeoIPPropertyService):
                 if not dst_loc:
                     continue
                 costs[s][d] = self.get_geo_distance(src_loc, dst_loc)
-        return costs
+        content['endpoint-cost-map'] = costs
+        return content
 
 
 class PathVectorService:
