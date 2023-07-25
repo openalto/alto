@@ -233,6 +233,23 @@ TEST_ECS = {
     }
 }
 
+TEST_VISUALNET_API_ECS = {
+    "meta": {
+        "cost-type": {
+            "cost-metric": "tput:mean",
+            "anchor-alg": "same-site",
+            "interval": {
+                "last": "2d"
+            }
+        }
+    },
+    "endpoint-cost-map": {
+        "ipv4:202.122.33.13": {
+            "ipv4:192.41.231.82": 2031505542.25
+        }
+    }
+}
+
 TEST_ECS_PV = """--d41d8cd98f00b204e9800998ecf8427e
 Content-Type: application/alto-endpointcost+json
 Content-ID: <ecs@localhost>
@@ -403,6 +420,12 @@ MOCK = [
         'uri': 'http://localhost:8181/alto/pathvector/pv',
         'headers': {'content-type': 'multipart/related; boundary=d41d8cd98f00b204e9800998ecf8427e; type=application/alto-endpointcost+json; charset=utf-8'},
         'text': TEST_ECS_PV,
+        'status_code': 200
+    },
+    {
+        'uri': 'http://localhost:8000/endpointcost/lookup',
+        'headers': {'content-type': "application/json"},
+        'json': TEST_VISUALNET_API_ECS,
         'status_code': 200
     }
 ]

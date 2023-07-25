@@ -42,7 +42,6 @@ from alto.mock import (TEST_DYNAMIC_NM_1,
                        TEST_DYNAMIC_NM_5)
 
 from .db import data_broker_manager
-from .vcs import vcs_singleton
 
 
 class MockService:
@@ -211,9 +210,13 @@ class GeoDistanceService(GeoIPPropertyService):
                                                math.cos(lat1)*math.cos(lat2)*math.sin(d_lng/2)**2))
         return d_geo
 
-    def lookup(self, srcs, dsts):
+    def lookup(self, srcs, dsts, cost_type):
         if self.autoreload:
             self.db.build_cache()
+
+        content = dict()
+        content['meta'] = dict()
+        content['meta']['cost-type'] = cost_type
 
         costs = dict()
         endpoints = set(srcs).union(set(dsts))
@@ -228,7 +231,8 @@ class GeoDistanceService(GeoIPPropertyService):
                 if not dst_loc:
                     continue
                 costs[s][d] = self.get_geo_distance(src_loc, dst_loc)
-        return costs
+        content['endpoint-cost-map'] = costs
+        return content
 
 
 class PathVectorService:
@@ -360,6 +364,8 @@ class TIPSControlService:
     """
 
     def __init__(self, namespace, tips_resource_id='', **kwargs) -> None:
+        from .vcs import vcs_singleton
+
         self.ns = namespace
         self.vcs = vcs_singleton
         self.tips_resource_id = tips_resource_id

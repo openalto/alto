@@ -84,6 +84,10 @@ cost_types = {
     "cost-mode": "numerical",
     "cost-metric": "routingcost"
   },
+  "avg-tput": {
+    "cost-mode": "numerical",
+    "cost-metric": "tput:mean"
+  },
   "path-vector": {
     "cost-mode": "array",
     "cost-metric": "ane-path"}}
@@ -149,6 +153,18 @@ resources = {
     },
     "params": {
       "data_source": "geoip"
+    }
+  },
+  "ps": {
+    "type": "endpoint-cost",
+    "path": "endpointcost",
+    "namespace": "default",
+    "algorithm": "alto.server.components.ext.perfsonar.WrappedPerfSonarServiceV1",
+    "capabilities": {
+      "cost-type-names": [ "avg-tput" ]
+    },
+    "params": {
+      "visualnet_api": "http://localhost:8000/endpointcost/lookup"
     }
   },
   "geodist": {

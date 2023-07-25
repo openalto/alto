@@ -127,8 +127,8 @@ class EndpointCostView(APIView):
         dsts = endpoint_filter['dsts']
         cost_type = request.data.get('cost-type')
         if cost_type:
-            self.safe_check(cost_type) 
-        content = self.algorithm.lookup(srcs, dsts)
+            self.safe_check(cost_type)
+        content = self.algorithm.lookup(srcs, dsts, cost_type)
         constraints = request.data.get('constraints')
         if constraints:
             content = self.apply_constraints(content, constraints)
@@ -289,7 +289,7 @@ class TIPSView(APIView):
     renderer_classes = [TIPSRender]
     parser_classes = [TIPSParser]
 
-    algorithm = TIPSControlService(config.get_default_namespace())
+    algorithm = None # TIPSControlService(config.get_default_namespace())
     resource_id = ''
     content_type = ALTO_CONTENT_TYPE_TIPS
 
@@ -310,7 +310,7 @@ class TIPSMetadataView(APIView):
     """
     renderer_classes = [TIPSRender]
 
-    algorithm = TIPSControlService(config.get_default_namespace())
+    algorithm = None # TIPSControlService(config.get_default_namespace())
     resource_id = ''
     content_type = ALTO_CONTENT_TYPE_TIPS_VIEW
 
@@ -336,7 +336,7 @@ class TIPSDataTransferView(APIView):
     """
     renderer_classes = [TIPSRender]
 
-    algorithm = TIPSControlService(config.get_default_namespace())
+    algorithm = None # TIPSControlService(config.get_default_namespace())
     resource_id = ''
     content_type = ALTO_CONTENT_TYPE_TIPS
 
