@@ -77,6 +77,7 @@ db_config = {
     "delegate": {
       "backend": "local"}}}
 
+debug_mode = test
 default_namespace = default
 base_uri = https://alto.example.com/
 cost_types = {

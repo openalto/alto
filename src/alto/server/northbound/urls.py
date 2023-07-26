@@ -20,3 +20,7 @@ from django.urls import path,include
 urlpatterns = [
     path('', include('alto.server.northbound.alto.urls'))
 ]
+
+handler400 = 'alto.server.northbound.alto.exceptions.bad_request'
+handler404 = 'alto.server.northbound.alto.exceptions.not_found'
+handler500 = 'alto.server.northbound.alto.exceptions.server_error'

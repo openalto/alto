@@ -13,6 +13,7 @@ from alto.common.constants import (ALTO_CONTENT_TYPE_IRD,
                                    ALTO_CONTENT_TYPE_EPS,
                                    ALTO_CONTENT_TYPE_PROPMAP,
                                    ALTO_CONTENT_TYPE_TIPS,
+                                   ALTO_CONTENT_TYPE_ERROR,
                                    ALTO_PARAMETER_TYPE_ECS,
                                    ALTO_PARAMETER_TYPE_EPS,
                                    ALTO_PARAMETER_TYPE_PROPMAP,
@@ -22,83 +23,102 @@ from alto.common.constants import (ALTO_CONTENT_TYPE_IRD,
 ################################
 # Renders for ALTO related views
 ################################
-class IRDRender(JSONRenderer):
+class ALTOBaseRender(JSONRenderer):
+    """
+    Base render for ALTO information resources.
+    """
+
+    media_type = ALTO_CONTENT_TYPE_ERROR
+
+    def render(self, data, accepted_media_type=None, renderer_context=None):
+        if not renderer_context or 'response' not in renderer_context or not renderer_context['response'].exception:
+            return self._render(data, accepted_media_type, renderer_context)
+        return super(ALTOBaseRender, self).render(data, accepted_media_type, renderer_context)
+
+    def _render(self, data, accepted_media_type=None, renderer_context=None):
+        """
+        Override by render for specific information resource.
+        """
+        return super(ALTOBaseRender, self).render(data, accepted_media_type, renderer_context)
+
+
+class IRDRender(ALTOBaseRender):
     """
     Render for Information Resource Directory.
     """
 
     media_type = ALTO_CONTENT_TYPE_IRD
 
-    def render(self, data, accepted_media_type=None, renderer_context=None):
-        return super(IRDRender, self).render(data, accepted_media_type, renderer_context)
+    def _render(self, data, accepted_media_type=None, renderer_context=None):
+        return super(ALTOBaseRender, self).render(data, accepted_media_type, renderer_context)
 
 
-class NetworkMapRender(JSONRenderer):
+class NetworkMapRender(ALTOBaseRender):
     """
     Render for Network Map.
     """
 
     media_type = ALTO_CONTENT_TYPE_NM
 
-    def render(self, data, accepted_media_type=None, renderer_context=None):
-        return super(NetworkMapRender, self).render(data, accepted_media_type, renderer_context)
+    def _render(self, data, accepted_media_type=None, renderer_context=None):
+        return super(ALTOBaseRender, self).render(data, accepted_media_type, renderer_context)
 
 
-class CostMapRender(JSONRenderer):
+class CostMapRender(ALTOBaseRender):
     """
     Render for Cost Map.
     """
 
     media_type = ALTO_CONTENT_TYPE_CM
 
-    def render(self, data, accepted_media_type=None, renderer_context=None):
-        return super(CostMapRender, self).render(data, accepted_media_type, renderer_context)
+    def _render(self, data, accepted_media_type=None, renderer_context=None):
+        return super(ALTOBaseRender, self).render(data, accepted_media_type, renderer_context)
 
 
-class EndpointCostRender(JSONRenderer):
+class EndpointCostRender(ALTOBaseRender):
     """
     Render for Endpoint Cost Service.
     """
 
     media_type = ALTO_CONTENT_TYPE_ECS
 
-    def render(self, ecmap, accepted_media_type=None, renderer_context=None):
+    def _render(self, ecmap, accepted_media_type=None, renderer_context=None):
         data = dict()
         data['meta'] = ecmap['meta']
         data['endpoint-cost-map'] = ecmap['endpoint-cost-map']
-        return super(EndpointCostRender, self).render(data, accepted_media_type,
+        return super(ALTOBaseRender, self).render(data, accepted_media_type,
                                                       renderer_context)
 
 
-class EndpointPropRender(JSONRenderer):
+class EndpointPropRender(ALTOBaseRender):
     """
-    Render for Entity Property Map.
+    Render for Endpoint Property Map.
     """
 
     media_type = ALTO_CONTENT_TYPE_EPS
 
-    def render(self, propmap, accepted_media_type=None, renderer_context=None):
+    def _render(self, propmap, accepted_media_type=None, renderer_context=None):
         data = dict()
         data['endpoint-properties'] = propmap
-        return super(EntityPropRender, self).render(data, accepted_media_type,
+        return super(ALTOBaseRender, self).render(data, accepted_media_type,
                                                     renderer_context)
 
 
-class EntityPropRender(JSONRenderer):
+class EntityPropRender(ALTOBaseRender):
     """
     Render for Entity Property Map.
     """
 
     media_type = ALTO_CONTENT_TYPE_PROPMAP
 
-    def render(self, propmap, accepted_media_type=None, renderer_context=None):
+    def _render(self, propmap, accepted_media_type=None, renderer_context=None):
         data = dict()
         data['property-map'] = propmap
-        return super(EntityPropRender, self).render(data, accepted_media_type,
+        return super(ALTOBaseRender, self).render(data, accepted_media_type,
                                                     renderer_context)
 
 
-class MultiPartRelatedRender(MultiPartRenderer):
+class MultiPartRelatedRender(ALTOBaseRender):
     # accept
     media_type = 'multipart/related'
     # multipart_related = 'multipart/related'
@@ -112,7 +132,7 @@ class MultiPartRelatedRender(MultiPartRenderer):
     def __init__(self):
         super(MultiPartRelatedRender, self).__init__()
 
-    def render(self, data, accepted_media_type=None, renderer_context=None):
+    def _render(self, data, accepted_media_type=None, renderer_context=None):
 
         return self.encode_multipart(data)
 
@@ -155,7 +175,7 @@ class MultiPartRelatedRender(MultiPartRenderer):
         )
 
 
-class TIPSRender(JSONRenderer):
+class TIPSRender(ALTOBaseRender):
     """
     Render for ALTO Transport Information Publication Service (TIPS).
     """
@@ -163,7 +183,7 @@ class TIPSRender(JSONRenderer):
     media_type = ALTO_CONTENT_TYPE_TIPS
 
     def render(self, data, accepted_media_type=None, renderer_context=None):
-        return super(TIPSRender, self).render(data, accepted_media_type,
+        return super(ALTOBaseRender, self).render(data, accepted_media_type,
                                                     renderer_context)
 
 

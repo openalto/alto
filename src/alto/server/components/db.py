@@ -39,6 +39,7 @@ class DataBrokerManager(object):
         """
         if namespace not in self.pool:
             self.pool[namespace] = dict()
+        # if db_type not in self.pool[namespace]:
         self.pool[namespace][db_type] = db
 
     def get(self, namespace, db_type):
