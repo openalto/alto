@@ -156,6 +156,15 @@ resources = {
       "data_source": "geoip"
     }
   },
+  "geoip-misconfig": {
+    "type": "entity-prop",
+    "path": "entityprop",
+    "namespace": "default",
+    "algorithm": "alto.server.components.backend.GeoIPPropertyService",
+    "params": {
+      "data_source": "geoip-not-exist"
+    }
+  },
   "ps": {
     "type": "endpoint-cost",
     "path": "endpointcost",
