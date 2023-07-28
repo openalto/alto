@@ -85,26 +85,3 @@ def server_error(request, *args, **kwargs):
     }
     return JsonResponse(data, status=status.HTTP_500_INTERNAL_SERVER_ERROR, content_type=ALTO_CONTENT_TYPE_ERROR)
 
-
-def bad_request(request, exception, *args, **kwargs):
-    """
-    Generic 400 error handler.
-    """
-    exception_repr = exception.__class__.__name__
-    try:
-        message = exception.args[0]
-    except (AttributeError, IndexError):
-        pass
-    else:
-        if isinstance(message, str):
-            exception_repr = message
-    data = {
-        'meta': {
-            'code': 'E_GENERIC_HTTP_400_BAD_REQUEST'
-        },
-        'context': {
-            "request_path": quote(request.path),
-            "exception": exception_repr,
-        }
-    }
-    return JsonResponse(data, status=status.HTTP_400_BAD_REQUEST, content_type=ALTO_CONTENT_TYPE_ERROR)
