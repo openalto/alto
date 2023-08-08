@@ -44,10 +44,10 @@ def test_alto_config(*args):
         del os.environ['XDG_CONFIG_HOME']
     if 'ALTO_HOME' in os.environ:
         del os.environ['ALTO_HOME']
-    
+
     config = Config()
     assert config.location is None or os.path.dirname(config.location) == os.path.normpath('/opt/alto/etc')
-    
+
     if 'HOME' not in os.environ:
         os.environ.setdefault('HOME', os.path.dirname(__file__))
     if 'XDG_CONFIG_HOME' not in os.environ:
@@ -62,6 +62,9 @@ def test_alto_config(*args):
 
     os.environ.setdefault('ALTO_CONFIG', os.path.join(os.path.dirname(__file__), '../etc/alto.conf.test'))
     config = Config()
+
+    debug_mode = config.get_debug_mode()
+    assert debug_mode == 'test'
 
     db_config = config.get_db_config()
     assert 'default' in db_config

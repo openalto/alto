@@ -100,6 +100,14 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
+# REST framework configuration
+# https://www.django-rest-framework.org/api-guide/settings/
+
+REST_FRAMEWORK = {
+    'EXCEPTION_HANDLER': 'alto.server.northbound.alto.exceptions.alto_exception_handler'
+}
+
+
 # Internationalization
 # https://docs.djangoproject.com/en/4.0/topics/i18n/
 
@@ -122,13 +130,3 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-MININET_URL = 'http://127.0.0.1:8181/topology'
-OPENDAYLIGHT_CREDENTIALS = {
-    'odl1': [ 'admin', 'admin' ],
-    'odl2': [ 'admin', 'admin' ]
-}
-
-DEFAULT_NAMESPACE = "default"
-
-
-BOUNDARY_STRING = '62f59eb2ec394a36bec324f743f64db2'

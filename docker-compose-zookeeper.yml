@@ -14,7 +14,7 @@ services:
       - ./src/alto:/usr/local/lib/python3.10/site-packages/alto
       - ./etc/alto.conf:/opt/alto/etc/alto.conf
     entrypoint: gunicorn
-    command: ["-b", "0.0.0.0:8000", "--threads", "4", "--reload", "alto.server.northbound.wsgi", "--preload", "--capture-output"]
+    command: ["-b", "0.0.0.0:8000", "--threads", "4", "--reload", "alto.server.northbound.wsgi", "--preload", "--log-level", "debug", "--capture-output"]
   alto-lg-agent:
     image: openalto/alto
     volumes:

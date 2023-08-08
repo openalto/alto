@@ -35,6 +35,7 @@ from typing import List
 from django.core import mail
 from django.test import TestCase
 from django.urls import URLResolver, resolve, Resolver404, get_resolver
+from rest_framework.test import APIClient
 
 from alto.server.components.db import (data_broker_manager,
                                        Match,
@@ -50,6 +51,7 @@ from alto.common.constants import (ALTO_CONTENT_TYPE_IRD,
                                    ALTO_CONTENT_TYPE_PROPMAP,
                                    ALTO_CONTENT_TYPE_TIPS,
                                    ALTO_CONTENT_TYPE_TIPS_VIEW,
+                                   ALTO_CONTENT_TYPE_ERROR,
                                    ALTO_PARAMETER_TYPE_ECS,
                                    ALTO_PARAMETER_TYPE_PROPMAP,
                                    ALTO_PARAMETER_TYPE_TIPS)
@@ -174,6 +176,10 @@ class ALTONorthboundTest(TestCase):
         db_trans.commit()
 
 
+    def setUp(self):
+        self.client = APIClient(raise_request_exception=False)
+
+
     def test_northbound_routes(self):
         resources = self.config.get_configured_resources()
         tips_resources = [r for r in resources if resources[r]['type'] == 'tips']
@@ -275,6 +281,7 @@ class ALTONorthboundTest(TestCase):
         self.assertEqual(response.has_header('Content-Type'), True)
         self.assertEqual(response.get('Content-Type'), ALTO_CONTENT_TYPE_ECS)
 
+
     def test_view_perfsonar(self):
         response = self.client.post('/endpointcost/ps',
                                     data=json.dumps({
@@ -343,3 +350,43 @@ class ALTONorthboundTest(TestCase):
                     self.assertEqual(response.status_code, 200)
                     self.assertEqual(response.has_header('Content-Type'), True)
                     self.assertEqual(response.get('Content-Type'), 'application/merge-patch+json')
+
+
+    def test_error_unsupported_media_type(self):
+        response = self.client.post('/entityprop/geoip',
+                                    data=json.dumps({
+                                        'entities': [
+                                            'ipv4:10.1.0.2',
+                                            'ipv4:10.2.0.2',
+                                            'ipv4:10.3.0.2'
+                                        ]
+                                    }),
+                                    content_type="application/json",
+                                    accepts=ALTO_CONTENT_TYPE_PROPMAP)
+        self.assertEqual(response.status_code, 415)
+        self.assertEqual(response.has_header('Content-Type'), True)
+        self.assertEqual(response.get('Content-Type'), ALTO_CONTENT_TYPE_ERROR)
+
+
+    def test_error_not_found(self):
+        response = self.client.get('/not_exist',
+                                   accepts=ALTO_CONTENT_TYPE_IRD)
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.has_header('Content-Type'), True)
+        self.assertEqual(response.get('Content-Type'), ALTO_CONTENT_TYPE_ERROR)
+
+
+    def test_error_internal_error(self):
+        response = self.client.post('/entityprop/geoip-misconfig',
+                                    data=json.dumps({
+                                        'entities': [
+                                            'ipv4:10.1.0.2',
+                                            'ipv4:10.2.0.2',
+                                            'ipv4:10.3.0.2'
+                                        ]
+                                    }),
+                                    content_type=ALTO_PARAMETER_TYPE_PROPMAP,
+                                    accepts=ALTO_CONTENT_TYPE_PROPMAP)
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.has_header('Content-Type'), True)
+        self.assertEqual(response.get('Content-Type'), ALTO_CONTENT_TYPE_ERROR)

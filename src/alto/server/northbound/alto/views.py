@@ -1,5 +1,6 @@
 import uuid
 from django.conf import settings as conf_settings
+from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -20,8 +21,7 @@ from alto.server.components.backend import (IRDService,
                                             MockService)
 from alto.config import Config
 from alto.utils import load_class, setup_debug_db
-from alto.common.constants import (ALTO_CONTENT_TYPE_ERROR,
-                                   ALTO_CONTENT_TYPE_IRD,
+from alto.common.constants import (ALTO_CONTENT_TYPE_IRD,
                                    ALTO_CONTENT_TYPE_NM,
                                    ALTO_CONTENT_TYPE_CM,
                                    ALTO_CONTENT_TYPE_ECS,
@@ -33,7 +33,7 @@ from alto.common.constants import (ALTO_CONTENT_TYPE_ERROR,
 config = Config()
 
 
-if conf_settings.DEBUG:
+if config.get_debug_mode() != 'test':
     setup_debug_db(config)
 
 
@@ -300,7 +300,8 @@ class TIPSView(APIView):
             client_id = request.user.get_username()
         content = self.algorithm.subscribe(post_data, client_id=client_id)
         if content is None:
-            return Response(dict(), status=404, content_type=ALTO_CONTENT_TYPE_ERROR)
+            raise NotFound()
+            # return Response(dict(), status=404, content_type=ALTO_CONTENT_TYPE_ERROR)
         return Response(content, content_type=self.content_type)
 
 
@@ -317,7 +318,8 @@ class TIPSMetadataView(APIView):
     def get(self, request, resource_id=None, digest=None, ug_only=False, start_seq=None, end_seq=None):
         content = self.algorithm.get_tips_view(resource_id, digest, ug_only, start_seq, end_seq)
         if content is None:
-            return Response(dict(), status=404, content_type=ALTO_CONTENT_TYPE_ERROR)
+            raise NotFound()
+            # return Response(dict(), status=404, content_type=ALTO_CONTENT_TYPE_ERROR)
         return Response(content, content_type=self.content_type)
 
     def delete(self, request, resource_id=None, digest=None):
@@ -326,7 +328,8 @@ class TIPSMetadataView(APIView):
             client_id = request.user.get_username()
         success = self.algorithm.unsubscribe(resource_id, digest, client_id=client_id)
         if not success:
-            return Response(dict(), status=404, content_type=ALTO_CONTENT_TYPE_ERROR)
+            raise NotFound()
+            # return Response(dict(), status=404, content_type=ALTO_CONTENT_TYPE_ERROR)
         return Response(content_type=self.content_type)
 
 
@@ -343,7 +346,8 @@ class TIPSDataTransferView(APIView):
     def get(self, request, resource_id=None, digest=None, start_seq=None, end_seq=None):
         content, media_type = self.algorithm.get_tips_data(resource_id, digest, start_seq, end_seq)
         if content is None:
-            return Response(dict(), status=404, content_type=ALTO_CONTENT_TYPE_ERROR)
+            raise NotFound()
+            # return Response(dict(), status=404, content_type=ALTO_CONTENT_TYPE_ERROR)
         return Response(content, content_type=media_type)
 
 

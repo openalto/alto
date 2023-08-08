@@ -158,6 +158,11 @@ class Config:
             return json.loads(cost_types_json.strip())
 
 
+    def get_debug_mode(self):
+        self.parser.read(self.location)
+        return self.parser.get('server', 'debug_mode', fallback='production')
+
+
     ####################################
     # ALTO server version control config
     ####################################
